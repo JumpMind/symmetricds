@@ -24,6 +24,7 @@ import java.sql.Types;
 
 import org.apache.commons.lang3.StringUtils;
 import org.jumpmind.db.model.Column;
+import org.jumpmind.db.model.PlatformColumn;
 import org.jumpmind.db.model.Table;
 import org.jumpmind.db.model.TypeMap;
 import org.jumpmind.db.platform.DatabaseNamesConstants;
@@ -212,5 +213,16 @@ public class MsSql2005DdlBuilder extends MsSql2000DdlBuilder {
             sqlType = String.format("NVARCHAR(%s)", strColumnSize);
         }
         return sqlType;
+    }
+    
+    @Override
+    protected void writeColumnType(Table table, Column column, StringBuilder ddl) {
+        super.writeColumnType(table, column, ddl);
+        PlatformColumn platformColumn = column.findPlatformColumn(databaseName);
+        if (platformColumn.isUserDefinedType() &&
+                !(databaseInfo.isNullAsDefaultValueRequired() && databaseInfo.hasNullDefault(column.getMappedTypeCode()))) {
+            ddl.append(" ");
+            writeColumnNullableStmt(ddl);            
+        }
     }
 }

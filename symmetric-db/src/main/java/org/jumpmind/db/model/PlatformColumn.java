@@ -30,7 +30,8 @@ public class PlatformColumn implements Serializable, Cloneable {
     private int decimalDigits = -1;
     private String defaultValue;
     private String[] enumValues;
-
+    private boolean userDefinedType;
+    
     public PlatformColumn(String name, String type, int size, int decimalDigits, String defaultValue) {
         this.name = name;
         this.type = type;
@@ -128,7 +129,15 @@ public class PlatformColumn implements Serializable, Cloneable {
         return enumValues != null && enumValues.length > 0;
     }
 
-    @Override
+    public boolean isUserDefinedType() {
+		return userDefinedType;
+	}
+
+	public void setUserDefinedType(boolean userDefinedType) {
+		this.userDefinedType = userDefinedType;
+	}
+
+	@Override
     public Object clone() throws CloneNotSupportedException {
         return super.clone();
     }

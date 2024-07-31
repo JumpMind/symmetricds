@@ -294,6 +294,8 @@ public class DatabaseXmlUtil {
                                     if (isNotBlank(attributeValue)) {
                                         platformColumn.setEnumValues(attributeValue.split(","));
                                     }
+                                } else if (attributeName.equalsIgnoreCase("userDefinedType")) {
+                                	platformColumn.setUserDefinedType(Boolean.parseBoolean(attributeValue));
                                 }
                             }
                             if (table != null && table.getColumnCount() > 0) {
@@ -603,6 +605,9 @@ public class DatabaseXmlUtil {
                                 writeComma = true;
                             }
                             output.write("\"");
+                        }
+                        if (platformColumn.isUserDefinedType()) {
+                        	output.write(" userDefinedType=\"" + platformColumn.isUserDefinedType() + "\"");
                         }
                         output.write("/>\n");
                     }
