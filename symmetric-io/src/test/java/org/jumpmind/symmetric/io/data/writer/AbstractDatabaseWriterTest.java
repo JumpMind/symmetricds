@@ -161,8 +161,8 @@ public class AbstractDatabaseWriterTest {
          assertNotNull(rowData);
          assertEquals(targetColumnNames.length, rowData.length);
          assertArrayEquals(expectedRowData, rowData);
-         System.out.println("testGetRowData_LotsOfRandomAndFewSkippedColumns done; Runtime ms=" + (System.currentTimeMillis()
-                 - startTime));
+         // System.out.println("testGetRowData_LotsOfRandomAndFewSkippedColumns done; Runtime ms=" + (System.currentTimeMillis()
+         // - startTime));
          abstractDatabaseWriter.close();
      }
 
