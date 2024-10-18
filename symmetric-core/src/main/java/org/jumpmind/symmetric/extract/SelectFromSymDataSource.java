@@ -49,6 +49,7 @@ import org.jumpmind.symmetric.model.Data;
 import org.jumpmind.symmetric.model.Node;
 import org.jumpmind.symmetric.model.OutgoingBatch;
 import org.jumpmind.symmetric.model.ProcessInfo;
+import org.jumpmind.symmetric.model.TableReloadRequest;
 import org.jumpmind.symmetric.model.TableReloadStatus;
 import org.jumpmind.symmetric.model.Trigger;
 import org.jumpmind.symmetric.model.TriggerHistory;
@@ -92,6 +93,7 @@ public class SelectFromSymDataSource extends SelectFromSource {
                 || symmetricDialect.getName().equals(DatabaseNamesConstants.MSSQL2016);
     }
 
+    @Override
     public CsvData next() {
         if (cursor == null) {
             cursor = dataService.selectDataFor(batch.getBatchId(), batch.getTargetNodeId(), containsBigLob);
@@ -244,6 +246,32 @@ public class SelectFromSymDataSource extends SelectFromSource {
         return new SelectFromTableSource(engine, outgoingBatch, batch, event);
     }
 
+    /***
+     * Determines whether target table should have transaction logging deferred, until after load is complete (to speed up data import). Batch must be part of a
+     * load request.
+     * 
+     * @param batch
+     * @param excludeIndices
+     * @return true for deferring logging for target table
+     */
+    protected boolean evaluateDeferTableLogging(OutgoingBatch batch, boolean sendSchemaExcludeIndices) {
+        if (!outgoingBatch.isLoadFlag()) {
+            return false;
+        }
+        if (sendSchemaExcludeIndices) {
+            return true;
+        }
+        TableReloadRequest outgoingLoad = dataService.getTableReloadRequest(batch.getLoadId());
+        if (outgoingLoad == null) {
+            return false;
+        }
+        if (outgoingLoad.isCreateTable()) {
+            return true;
+        }
+        // parameterService.is(ParameterConstants.INITIAL_LOAD_DEFER_CREATE_CONSTRAINTS, false);
+        return false;
+    }
+
     protected boolean processCreateEvent(TriggerHistory triggerHistory, String routerId, Data data) {
         String oldData = data.getCsvData(CsvData.OLD_DATA);
         boolean sendSchemaExcludeIndices = false;
@@ -265,6 +293,7 @@ public class SelectFromSymDataSource extends SelectFromSource {
         boolean excludeForeignKeys = parameterService.is(ParameterConstants.CREATE_TABLE_WITHOUT_FOREIGN_KEYS, false) | sendSchemaExcludeForeignKeys;
         boolean excludeIndexes = parameterService.is(ParameterConstants.CREATE_TABLE_WITHOUT_INDEXES, false) | sendSchemaExcludeIndices;
         boolean deferConstraints = outgoingBatch.isLoadFlag() && parameterService.is(ParameterConstants.INITIAL_LOAD_DEFER_CREATE_CONSTRAINTS, false);
+        boolean deferTableLogging = evaluateDeferTableLogging(outgoingBatch, sendSchemaExcludeIndices);
         String[] pkData = data.getParsedData(CsvData.PK_DATA);
         if (pkData != null && pkData.length > 0) {
             outgoingBatch.setLoadId(Long.parseLong(pkData[0]));
@@ -286,6 +315,9 @@ public class SelectFromSymDataSource extends SelectFromSource {
         db.setName("dataextractor");
         db.setCatalog(copyTargetTable.getCatalog());
         db.setSchema(copyTargetTable.getSchema());
+        if (deferTableLogging) {
+            copyTargetTable.setLogging(false);
+        }
         db.addTable(copyTargetTable);
         if (excludeDefaults) {
             copyTargetTable.removeAllColumnDefaults();
@@ -328,10 +360,15 @@ public class SelectFromSymDataSource extends SelectFromSource {
                 }
             }
         }
-        data.setRowData(CsvUtils.escapeCsvData(DatabaseXmlUtil.toXml(db)));
+        String xml = DatabaseXmlUtil.toXml(db);
+        data.setRowData(CsvUtils.escapeCsvData(xml));
+        if (excludeDefaults || excludeForeignKeys || excludeIndexes || deferConstraints || deferTableLogging) {
+            log.info("Adjusted table definition: {}", xml);
+        }
         return true;
     }
 
+    @Override
     public boolean requiresLobsSelectedFromSource(CsvData data) {
         return requiresLobSelectedFromSource;
     }
@@ -346,6 +383,7 @@ public class SelectFromSymDataSource extends SelectFromSource {
         targetTable = null;
     }
 
+    @Override
     public void close() {
         closeCursor();
         if (reloadSource != null) {
