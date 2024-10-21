@@ -163,6 +163,7 @@ final public class ParameterConstants {
     public final static String INITIAL_LOAD_USE_ESTIMATED_COUNTS = "initial.load.use.estimated.counts";
     public final static String INITIAL_LOAD_PURGE_STAGE_IMMEDIATE_THRESHOLD_ROWS = "initial.load.purge.stage.immediate.threshold.rows";
     public final static String INITIAL_LOAD_DEFER_CREATE_CONSTRAINTS = "initial.load.defer.create.constraints";
+    public final static String INITIAL_LOAD_DEFER_TABLE_LOGGING = "initial.load.defer.table.logging";
     public final static String INITIAL_LOAD_RECURSION_SELF_FK = "initial.load.recursion.self.fk";
     public final static String EXTRACT_CHECK_ROW_SIZE = "extract.check.row.size";
     public final static String EXTRACT_ROW_MAX_LENGTH = "extract.row.max.length";

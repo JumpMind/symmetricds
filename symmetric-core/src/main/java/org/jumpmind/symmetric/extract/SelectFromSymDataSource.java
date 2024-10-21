@@ -254,21 +254,18 @@ public class SelectFromSymDataSource extends SelectFromSource {
      * @param excludeIndices
      * @return true for deferring logging for target table
      */
-    protected boolean evaluateDeferTableLogging(OutgoingBatch batch, boolean sendSchemaExcludeIndices) {
+    protected boolean evaluateDeferTableLogging(OutgoingBatch batch, boolean deferIndices) {
         if (!outgoingBatch.isLoadFlag()) {
             return false;
         }
-        if (sendSchemaExcludeIndices) {
-            return true;
+        if (!parameterService.is(ParameterConstants.INITIAL_LOAD_DEFER_TABLE_LOGGING, true)) {
+            return false;
         }
         TableReloadRequest outgoingLoad = dataService.getTableReloadRequest(batch.getLoadId());
         if (outgoingLoad == null) {
             return false;
         }
-        if (outgoingLoad.isCreateTable()) {
-            return true;
-        }
-        return false;
+        return (deferIndices || outgoingLoad.isCreateTable());
     }
 
     protected boolean processCreateEvent(TriggerHistory triggerHistory, String routerId, Data data) {
