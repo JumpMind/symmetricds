@@ -268,7 +268,6 @@ public class SelectFromSymDataSource extends SelectFromSource {
         if (outgoingLoad.isCreateTable()) {
             return true;
         }
-        // parameterService.is(ParameterConstants.INITIAL_LOAD_DEFER_CREATE_CONSTRAINTS, false);
         return false;
     }
 
