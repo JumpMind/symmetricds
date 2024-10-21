@@ -23,7 +23,7 @@ package org.jumpmind.db.platform.postgresql;
 import org.jumpmind.db.platform.DatabaseNamesConstants;
 
 /**
- * Overrides defaults to enable features introduced in the PostgreSQL version 9.5 https://www.postgresql.org/docs/release/9.5.0/
+ * PostgreSQL version 9.5 https://www.postgresql.org/docs/release/9.5.0/
  */
 public class PostgreSqlDdlBuilder95 extends PostgreSqlDdlBuilder {
     public PostgreSqlDdlBuilder95() {

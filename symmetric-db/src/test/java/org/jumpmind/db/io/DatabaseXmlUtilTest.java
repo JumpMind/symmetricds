@@ -63,13 +63,10 @@ public class DatabaseXmlUtilTest {
 
     @Test
     public void testWriteXml_ForTableWithoutLogging() {
-        // Arrange
         Database database = DatabaseXmlUtil.read(getClass().getResourceAsStream("/testDatabaseIO.xml"));
         Table tableWithoutLogging = database.getTable(1);
         tableWithoutLogging.setLogging(false);
-        // Act
         String xml = DatabaseXmlUtil.toXml(database);
-        // Assert
         // System.out.println("testWriteXml_ForTableWithoutLogging xml=" + xml);
         assertTrue(xml.contains(" logging=\"false\""));
     }
@@ -77,17 +74,14 @@ public class DatabaseXmlUtilTest {
     @ParameterizedTest
     @ValueSource(ints = { 0, 1 })
     public void testReadXml_ForTableWithoutLogging(int tableLoggingMode) {
-        // Arrange
         String tableLoggingStr = (tableLoggingMode == 1) ? "true" : "false";
         String xml = "<database name=\"test\">"
                 + "<table name=\"testColumnWith&amp;\" logging=\"" + tableLoggingStr + "\">\n"
                 + "        <column name=\"&amp;Amp\" type=\"VARCHAR\" size=\"50\"/>\n"
                 + "    </table></database>\n";
-        // Act
         StringReader reader = new StringReader(xml);
         Database database = DatabaseXmlUtil.read(reader, false);
         Table tableWithoutLogging = database.getTable(0);
-        // Assert
         // System.out.println(String.format("testReadXml_ForTableWithoutLogging Logging=%b", tableWithoutLogging.getLogging()));
         assertTrue((tableLoggingMode == 1) == tableWithoutLogging.getLogging());
     }

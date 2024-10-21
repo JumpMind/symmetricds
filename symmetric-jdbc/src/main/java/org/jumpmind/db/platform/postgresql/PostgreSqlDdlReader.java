@@ -102,8 +102,6 @@ public class PostgreSqlDdlReader extends AbstractJdbcDdlReader {
      * </ul>
      */
     protected void readMetaDataAndPrimaryKeyConstraint(Connection connection, Table table) throws SQLException {
-        // String sql = "select conname from pg_constraint where conrelid in (select oid from pg_class where relname=? and relnamespace in (select oid from
-        // pg_namespace where nspname=?)) and contype='p'";
         long startTime = System.currentTimeMillis();
         final String TRAIT_LOGGING_MODE = "LOGGING_MODE";
         final String TRAIT_PRIMARY_KEY_NAME = "PRIMARY_KEY_NAME";
@@ -131,16 +129,16 @@ public class PostgreSqlDdlReader extends AbstractJdbcDdlReader {
                 .append(" WHERE contype='p'")
                 .append(" and conrelid in (select table_oid from table_object)")
                 .append(";");
-        PreparedStatement command = null;
-        ResultSet rows = null;
+        PreparedStatement ps = null;
+        ResultSet rs = null;
         try {
-            command = connection.prepareStatement(sqlBuilder.toString());
-            command.setString(1, table.getSchema());
-            command.setString(2, table.getName());
-            rows = command.executeQuery();
-            while(rows.next()) {
-                String traitName = rows.getString(1).trim();
-                String traitValue = rows.getString(2).trim();
+            ps = connection.prepareStatement(sqlBuilder.toString());
+            ps.setString(1, table.getSchema());
+            ps.setString(2, table.getName());
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                String traitName = rs.getString(1).trim();
+                String traitValue = rs.getString(2).trim();
                 switch (traitName) {
                     case TRAIT_LOGGING_MODE:
                         table.setLogging("true".equals(traitValue));
@@ -154,8 +152,8 @@ public class PostgreSqlDdlReader extends AbstractJdbcDdlReader {
                 }
             }
         } finally {
-            JdbcSqlTemplate.close(rows);
-            JdbcSqlTemplate.close(command);
+            JdbcSqlTemplate.close(rs);
+            JdbcSqlTemplate.close(ps);
         }
         long durationInMillis = System.currentTimeMillis() - startTime;
         log.debug(String.format("readMetaDataAndPrimaryKeyConstraint - Done. Table=%s; Logging=%b; Duration=%d ms", table.getName(), table.getLogging()
@@ -373,22 +371,21 @@ public class PostgreSqlDdlReader extends AbstractJdbcDdlReader {
         log.debug("Reading triggers for: " + tableName);
         JdbcSqlTemplate sqlTemplate = (JdbcSqlTemplate) platform
                 .getSqlTemplate();
-        StringBuilder sqlBuilder = new StringBuilder();
-        sqlBuilder.append("SELECT ")
-                .append("trigger_name, ")
-                .append("trigger_schema, ")
-                .append("trigger_catalog, ")
-                .append("event_manipulation AS trigger_type, ")
-                .append("event_object_table AS table_name,")
-                .append("trig.*, ")
-                .append("pgproc.prosrc ")
-                .append("FROM INFORMATION_SCHEMA.TRIGGERS AS trig ")
-                .append("INNER JOIN pg_catalog.pg_trigger AS pgtrig ")
-                .append("ON pgtrig.tgname=trig.trigger_name ")
-                .append("INNER JOIN pg_catalog.pg_proc AS pgproc ")
-                .append("ON pgproc.oid=pgtrig.tgfoid ")
-                .append("WHERE event_object_table=? AND event_object_schema=?;");
-        triggers = sqlTemplate.query(sqlBuilder.toString(), new ISqlRowMapper<Trigger>() {
+        String sql = "SELECT "
+                + "trigger_name, "
+                + "trigger_schema, "
+                + "trigger_catalog, "
+                + "event_manipulation AS trigger_type, "
+                + "event_object_table AS table_name,"
+                + "trig.*, "
+                + "pgproc.prosrc "
+                + "FROM INFORMATION_SCHEMA.TRIGGERS AS trig "
+                + "INNER JOIN pg_catalog.pg_trigger AS pgtrig "
+                + "ON pgtrig.tgname=trig.trigger_name "
+                + "INNER JOIN pg_catalog.pg_proc AS pgproc "
+                + "ON pgproc.oid=pgtrig.tgfoid "
+                + "WHERE event_object_table=? AND event_object_schema=?;";
+        triggers = sqlTemplate.query(sql, new ISqlRowMapper<Trigger>() {
             @Override
             public Trigger mapRow(Row row) {
                 Trigger trigger = new Trigger();

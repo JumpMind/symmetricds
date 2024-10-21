@@ -252,32 +252,15 @@ public class PostgreSqlDdlBuilder extends AbstractDdlBuilder {
     }
 
     /**
-     * Writes the table creation statement without the statement end but with an optional UNLOGGED trait.
+     * Supports an optional UNLOGGED trait when building new create table statement.
      */
     @Override
-    protected void writeTableCreationStmt(Table table, StringBuilder ddl) {
+    protected void writeTableCreateOpeningStmt(Table table, StringBuilder ddl) {
         ddl.append("CREATE");
         if (!table.getLogging() && this.databaseInfo.isTableLevelLoggingSupported()) {
             ddl.append(" UNLOGGED");
         }
         ddl.append(" TABLE ");
-        ddl.append(getFullyQualifiedTableNameShorten(table));
-        println("(", ddl);
-        writeColumns(table, ddl);
-        if (databaseInfo.isPrimaryKeyEmbedded()) {
-            writeEmbeddedPrimaryKeysStmt(table, ddl);
-        }
-        if (databaseInfo.isForeignKeysEmbedded()) {
-            writeEmbeddedForeignKeysStmt(table, ddl);
-        }
-        if (databaseInfo.isIndicesEmbedded()) {
-            writeEmbeddedIndicesStmt(table, ddl);
-        }
-        println(ddl);
-        ddl.append(")");
-        if (isSpecifyIdentityGapLimit()) {
-            writeIdentityGapLimit(ddl);
-        }
     }
 
     /*
