@@ -34,8 +34,10 @@ import org.jumpmind.db.sql.SqlTemplateSettings;
 
 /*
  * The platform implementation for the Microsoft SQL Server 2005 database.
+ * Adds NVARCHAR(MAX), VARCHAR(MAX) columns, which are treated as a regular string type, not as "large objects".
  */
 public class MsSql2005DatabasePlatform extends MsSql2000DatabasePlatform {
+
     /*
      * Creates a new platform instance.
      */
@@ -57,7 +59,7 @@ public class MsSql2005DatabasePlatform extends MsSql2000DatabasePlatform {
     @Override
     public String getDefaultSchema() {
         if (StringUtils.isBlank(defaultSchema)) {
-            defaultSchema = (String) getSqlTemplate().queryForObject("select SCHEMA_NAME()",
+            defaultSchema = getSqlTemplate().queryForObject("select SCHEMA_NAME()",
                     String.class);
         }
         return defaultSchema;
@@ -134,7 +136,7 @@ public class MsSql2005DatabasePlatform extends MsSql2000DatabasePlatform {
 
     @Override
     public String getCharSetName() {
-        return (String) getSqlTemplate().queryForObject("select collation_name from sys.databases where name =\r\n"
+        return getSqlTemplate().queryForObject("select collation_name from sys.databases where name =\r\n"
                 + "db_name()", String.class);
     }
 }

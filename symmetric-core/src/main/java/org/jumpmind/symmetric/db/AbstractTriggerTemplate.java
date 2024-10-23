@@ -760,11 +760,18 @@ abstract public class AbstractTriggerTemplate {
         return false;
     }
 
+    /***
+     * Helps detect Large Object columns. Some LOBs are inaccessible to triggers or require specialized code.
+     */
+    protected boolean isLob(Column column) {
+        return symmetricDialect.getPlatform().isLob(column.getMappedTypeCode());
+    }
+
     protected String buildColumnNameString(String tableAlias, boolean quote, Trigger trigger,
             Column[] columns) {
         StringBuilder columnsText = new StringBuilder();
         for (Column column : columns) {
-            boolean isLob = symmetricDialect.getPlatform().isLob(column.getMappedTypeCode());
+            boolean isLob = this.isLob(column);
             String columnName = column.getName();
             if (quote) {
                 columnName = SymmetricUtils.quote(symmetricDialect, columnName);
@@ -811,7 +818,7 @@ abstract public class AbstractTriggerTemplate {
     protected ColumnString fillOutColumnTemplate(String origTableAlias, String tableAlias,
             String columnPrefix, Table table, Column column, DataEventType dml, boolean isOld, Channel channel,
             Trigger trigger, boolean ignoreStreamLobs) {
-        boolean isLob = symmetricDialect.getPlatform().isLob(column.getMappedTypeCode());
+        boolean isLob = this.isLob(column);
         String templateToUse = null;
         if (column.getJdbcTypeName() != null
                 && (column.getJdbcTypeName().toUpperCase().contains(TypeMap.GEOMETRY))
@@ -857,6 +864,7 @@ abstract public class AbstractTriggerTemplate {
                         break;
                     } else if (!isLob) {
                         templateToUse = stringColumnTemplate;
+                        templateToUse = FormatUtils.replace("columnSizeOrMax", "max", templateToUse);
                         break;
                     }
                 case Types.CLOB:

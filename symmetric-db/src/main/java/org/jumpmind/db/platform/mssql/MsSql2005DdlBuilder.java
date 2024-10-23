@@ -30,6 +30,9 @@ import org.jumpmind.db.model.TypeMap;
 import org.jumpmind.db.platform.DatabaseNamesConstants;
 
 public class MsSql2005DdlBuilder extends MsSql2000DdlBuilder {
+    public static final int NVARCHARMAX_LIMIT = 4000;
+    public static final int VARCHARMAX_LIMIT = 8000;
+
     public MsSql2005DdlBuilder() {
         super();
         this.databaseName = DatabaseNamesConstants.MSSQL2005;
@@ -45,6 +48,7 @@ public class MsSql2005DdlBuilder extends MsSql2000DdlBuilder {
         databaseInfo.addNativeTypeMapping(Types.LONGVARCHAR, "VARCHAR(MAX)", Types.LONGVARCHAR);
     }
 
+    @Override
     protected void dropDefaultConstraint(Table table, String columnName, StringBuilder ddl) {
         String catalog = table.getCatalog();
         String schema = table.getSchema();
@@ -92,6 +96,7 @@ public class MsSql2005DdlBuilder extends MsSql2000DdlBuilder {
         printEndOfStatement(ddl);
     }
 
+    @Override
     protected void dropColumnChangeDefaults(Table sourceTable, Column sourceColumn, StringBuilder ddl) {
         // we're dropping the old default
         String tableName = getTableName(sourceTable.getName());
@@ -191,9 +196,9 @@ public class MsSql2005DdlBuilder extends MsSql2000DdlBuilder {
             sqlType = "HIERARCHYID";
         } else if (column.getMappedTypeCode() == Types.VARBINARY && column.getSizeAsInt() > 8000) {
             sqlType = "VARBINARY(MAX)";
-        } else if (column.getMappedTypeCode() == Types.VARCHAR && column.getSizeAsInt() > 8000) {
+        } else if (column.getMappedTypeCode() == Types.VARCHAR && column.getSizeAsInt() > VARCHARMAX_LIMIT) {
             sqlType = "VARCHAR(MAX)";
-        } else if (column.getMappedTypeCode() == Types.NVARCHAR && column.getSizeAsInt() > 8000) {
+        } else if (column.getMappedTypeCode() == Types.NVARCHAR && column.getSizeAsInt() > NVARCHARMAX_LIMIT) {
             sqlType = "NVARCHAR(MAX)";
         } else if (column.getMappedTypeCode() == Types.DECIMAL && column.getSizeAsInt() > 38) {
             sqlType = String.format("DECIMAL(38,%d)", column.getScale());
@@ -207,8 +212,8 @@ public class MsSql2005DdlBuilder extends MsSql2000DdlBuilder {
         if (useNvarChar && column.getMappedTypeCode() == Types.VARCHAR) {
             int intColumnSize = 2 * column.getSizeAsInt(); // As every character in MSSQL takes at least 2 bytes in N-types, we have to double the size.
             String strColumnSize = String.valueOf(intColumnSize);
-            if (intColumnSize > 4000) {
-                strColumnSize = "max";
+            if (intColumnSize > NVARCHARMAX_LIMIT) {
+                strColumnSize = "MAX";
             }
             sqlType = String.format("NVARCHAR(%s)", strColumnSize);
         }
