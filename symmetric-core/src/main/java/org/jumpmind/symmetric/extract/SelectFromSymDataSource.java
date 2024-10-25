@@ -30,6 +30,7 @@ import org.jumpmind.db.model.Column;
 import org.jumpmind.db.model.Database;
 import org.jumpmind.db.model.PlatformColumn;
 import org.jumpmind.db.model.Table;
+import org.jumpmind.db.platform.DatabaseInfo;
 import org.jumpmind.db.platform.DatabaseNamesConstants;
 import org.jumpmind.db.sql.DmlStatement;
 import org.jumpmind.db.sql.DmlStatement.DmlType;
@@ -248,7 +249,7 @@ public class SelectFromSymDataSource extends SelectFromSource {
 
     /***
      * Determines whether target table should have transaction logging deferred, until after load is complete (to speed up data import). Batch must be part of a
-     * load request.
+     * load request, which requests table manipulation to speed up import.
      * 
      * @param batch
      * @param excludeIndices
@@ -258,7 +259,11 @@ public class SelectFromSymDataSource extends SelectFromSource {
         if (!outgoingBatch.isLoadFlag()) {
             return false;
         }
-        if (!parameterService.is(ParameterConstants.INITIAL_LOAD_DEFER_TABLE_LOGGING, true)) {
+        if (!parameterService.is(ParameterConstants.INITIAL_LOAD_DEFER_TABLE_LOGGING, false)) {
+            return false;
+        }
+        DatabaseInfo databaseInfo = this.platform.getDatabaseInfo();
+        if (databaseInfo == null || !(databaseInfo.isTableLevelLoggingSupported())) {
             return false;
         }
         TableReloadRequest outgoingLoad = dataService.getTableReloadRequest(batch.getLoadId());
@@ -311,10 +316,10 @@ public class SelectFromSymDataSource extends SelectFromSource {
         db.setName("dataextractor");
         db.setCatalog(copyTargetTable.getCatalog());
         db.setSchema(copyTargetTable.getSchema());
+        db.addTable(copyTargetTable);
         if (deferTableLogging) {
             copyTargetTable.setLogging(false);
         }
-        db.addTable(copyTargetTable);
         if (excludeDefaults) {
             copyTargetTable.removeAllColumnDefaults();
         }
