@@ -114,6 +114,7 @@ abstract public class AbstractDatabaseWriter implements IDataWriter {
         if (this.targetTable == null && hasFilterThatHandlesMissingTable(table)) {
             this.targetTable = table;
         }
+        clearTargetColumnReferencesMap();
         /* The first data that requires a target table should fail because the table will not be found */
         return true;
     }
@@ -164,6 +165,7 @@ abstract public class AbstractDatabaseWriter implements IDataWriter {
                                 }
                                 break;
                             default:
+                                clearTargetColumnReferencesMap();
                                 break;
                         }
                         if (isRequiresSavePointsInTransaction && conflictResolver != null) {
@@ -433,18 +435,33 @@ abstract public class AbstractDatabaseWriter implements IDataWriter {
         if (originalValues == null) {
             return null;
         }
-        String key = TableColumnSourceReferences.generateSearchKey(sourceTable, targetTable);
-        TableColumnSourceReferences columnDestinations = this.targetColumnSourceReferencesMap.get(key);
-        if (columnDestinations == null) {
-            columnDestinations = new TableColumnSourceReferences(sourceTable, targetTable);
-            this.targetColumnSourceReferencesMap.put(key, columnDestinations);
-        }
-        for (TableColumnSourceReferences.ColumnSourceReferenceEntry referenceEntry : columnDestinations) {
+        TableColumnSourceReferences columnReferences = this.getTargetColumnReferencesMap();
+        for (TableColumnSourceReferences.ColumnSourceReferenceEntry referenceEntry : columnReferences) {
             if (referenceEntry.sourceColumnNo() < originalValues.length) {
                 targetValues[referenceEntry.targetColumnNo()] = originalValues[referenceEntry.sourceColumnNo()];
             }
         }
         return targetValues;
+    }
+
+    /**
+     * Looks up column mappings in the cache (or generates them). Used to quickly copy data from source columns into target columns.
+     */
+    protected TableColumnSourceReferences getTargetColumnReferencesMap() {
+        String key = TableColumnSourceReferences.generateSearchKey(this.sourceTable, this.targetTable);
+        TableColumnSourceReferences columnReferences = this.targetColumnSourceReferencesMap.get(key);
+        if (columnReferences == null) {
+            columnReferences = new TableColumnSourceReferences(this.sourceTable, this.targetTable);
+            this.targetColumnSourceReferencesMap.put(key, columnReferences);
+        }
+        return columnReferences;
+    }
+
+    /**
+     * Clears column mapping cache. Used when DDL changes impact column definitions.
+     */
+    protected void clearTargetColumnReferencesMap() {
+        this.targetColumnSourceReferencesMap.clear();
     }
 
     protected void bindVariables(Map<String, Object> variables) {
