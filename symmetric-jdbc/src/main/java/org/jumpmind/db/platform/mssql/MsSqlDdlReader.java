@@ -43,6 +43,7 @@ import static org.apache.commons.lang3.StringUtils.isNotBlank;
 
 import java.sql.Connection;
 import java.sql.Date;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Time;
@@ -90,13 +91,21 @@ public class MsSqlDdlReader extends AbstractJdbcDdlReader {
     private Pattern isoDatePattern = Pattern.compile("'(\\d{4}\\-\\d{2}\\-\\d{2})'");
     /* The regular expression pattern for the ISO times. */
     private Pattern isoTimePattern = Pattern.compile("'(\\d{2}:\\d{2}:\\d{2})'");
-    private Set<String> userDefinedDataTypes;
+    private Set<String> userDefinedDataTypes = new HashSet<String>();
 
     public MsSqlDdlReader(IDatabasePlatform platform) {
         super(platform);
         setDefaultCatalogPattern(null);
         setDefaultSchemaPattern(null);
         setDefaultTablePattern("%");
+        JdbcSqlTemplate sqlTemplate = (JdbcSqlTemplate) platform.getSqlTemplateDirty();
+        if (sqlTemplate.getDatabaseMajorVersion() >= 9) {
+            String sql = "select name from sys.types where is_user_defined = 1";
+            List<Row> rows = sqlTemplate.query(sql);
+            for (Row r : rows) {
+                userDefinedDataTypes.add(r.getString("name"));
+            }
+        }
     }
 
     @Override
@@ -134,8 +143,22 @@ public class MsSqlDdlReader extends AbstractJdbcDdlReader {
                     idx++;
                 }
             }
+            if (table.hasGeneratedColumns()) {
+                String sql = "SELECT name, definition FROM sys.computed_columns WHERE OBJECT_NAME(object_id) = ?";
+                try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                    ps.setString(1, tableName);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        while (rs.next()) {
+                            Column column = table.findColumn(rs.getString(1));
+                            if (column != null && column.getDefaultValue() == null) {
+                                column.setDefaultValue(rs.getString(2));
+                                parseDefaultValue(column);
+                            }
+                        }
+                    }
+                }
+            }
             if (platform instanceof MsSql2008DatabasePlatform) {
-                JdbcSqlTemplate sqlTemplate = (JdbcSqlTemplate) platform.getSqlTemplateDirty();
                 String sql = "SELECT [TABLENAME] = t.[Name]\n" +
                         "        ,[INDEXNAME] = i.[Name]\n" +
                         "        ,[IndexType] = i.[type_desc]\n" +
@@ -143,34 +166,38 @@ public class MsSqlDdlReader extends AbstractJdbcDdlReader {
                         "        ,[HASFILTER] = i.has_filter\n" +
                         "        ,[COMPRESSIONTYPE] = p.data_compression\n" +
                         "        ,[COMPRESSIONDESCRIPTION] = p.data_compression_desc\n" +
-                        "FROM sys.indexes i\n" +
-                        "INNER JOIN sys.tables t ON t.object_id = i.object_id\n" +
-                        "INNER JOIN sys.partitions p ON p.object_id=t.object_id AND p.index_id=i.index_id\n" +
+                        "FROM sys.indexes i WITH (NOLOCK)\n" +
+                        "INNER JOIN sys.tables t WITH (NOLOCK) ON t.object_id = i.object_id\n" +
+                        "INNER JOIN sys.partitions p WITH (NOLOCK) ON p.object_id=t.object_id AND p.index_id=i.index_id\n" +
                         "WHERE t.type_desc = N'USER_TABLE'\n" +
                         "and t.name=?\n" +
                         "and p.index_id in (0,1)";
                 List<String> l = new ArrayList<String>();
                 l.add(tableName);
                 log.debug("Running the following query to get metadata about whether a table has compression\n {}", sql);
-                List<Row> filters = sqlTemplate.query(sql, l.toArray());
-                for (Row filter : filters) {
-                    int compressionType = filter.getInt("COMPRESSIONTYPE");
-                    boolean hasCompression = (compressionType > 0);
-                    if (hasCompression) {
-                        if (compressionType == 1) {
-                            log.debug("table: " + tableName + " has compression: " + CompressionTypes.ROW.name());
-                            table.setCompressionType(CompressionTypes.ROW);
-                        } else if (compressionType == 2) {
-                            log.debug("table: " + tableName + " has compression: " + CompressionTypes.PAGE.name());
-                            table.setCompressionType(CompressionTypes.PAGE);
-                        } else if (compressionType == 3) {
-                            log.debug("table: " + tableName + " has compression: " + CompressionTypes.COLUMNSTORE.name());
-                            table.setCompressionType(CompressionTypes.COLUMNSTORE);
-                        } else if (compressionType == 4) {
-                            log.debug("table: " + tableName + " has compression: " + CompressionTypes.COLUMNSTORE_ARCHIVE.name());
-                            table.setCompressionType(CompressionTypes.COLUMNSTORE_ARCHIVE);
-                        } else {
-                            table.setCompressionType(CompressionTypes.NONE);
+                try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                    ps.setString(1, tableName);
+                    try (ResultSet rs = ps.executeQuery()) {
+                        while (rs.next()) {
+                            int compressionType = rs.getInt("COMPRESSIONTYPE");
+                            boolean hasCompression = (compressionType > 0);
+                            if (hasCompression) {
+                                if (compressionType == 1) {
+                                    log.debug("table: " + tableName + " has compression: " + CompressionTypes.ROW.name());
+                                    table.setCompressionType(CompressionTypes.ROW);
+                                } else if (compressionType == 2) {
+                                    log.debug("table: " + tableName + " has compression: " + CompressionTypes.PAGE.name());
+                                    table.setCompressionType(CompressionTypes.PAGE);
+                                } else if (compressionType == 3) {
+                                    log.debug("table: " + tableName + " has compression: " + CompressionTypes.COLUMNSTORE.name());
+                                    table.setCompressionType(CompressionTypes.COLUMNSTORE);
+                                } else if (compressionType == 4) {
+                                    log.debug("table: " + tableName + " has compression: " + CompressionTypes.COLUMNSTORE_ARCHIVE.name());
+                                    table.setCompressionType(CompressionTypes.COLUMNSTORE_ARCHIVE);
+                                } else {
+                                    table.setCompressionType(CompressionTypes.NONE);
+                                }
+                            }
                         }
                     }
                 }
@@ -261,30 +288,48 @@ public class MsSqlDdlReader extends AbstractJdbcDdlReader {
     protected Column readColumn(DatabaseMetaDataWrapper metaData, Map<String, Object> values)
             throws SQLException {
         Column column = super.readColumn(metaData, values);
-        String defaultValue = column.getDefaultValue();
-        if (userDefinedDataTypes == null) {
-            userDefinedDataTypes = new HashSet<String>();
-            JdbcSqlTemplate sqlTemplate = (JdbcSqlTemplate) platform.getSqlTemplateDirty();
-            if (sqlTemplate.getDatabaseMajorVersion() >= 9) {
-                String sql = "select name from sys.types where is_user_defined = 1";
-                List<Row> rows = sqlTemplate.query(sql);
-                for (Row r : rows) {
-                    userDefinedDataTypes.add(r.getString("name"));
+        parseDefaultValue(column);
+        if ((column.getMappedTypeCode() == Types.DECIMAL) && (column.getSizeAsInt() == 19)
+                && (column.getScale() == 0)) {
+            column.setMappedTypeCode(Types.BIGINT);
+        }
+        // These columns return sizes and/or decimal places with the metat data from MSSql Server however
+        // the values are not adjustable through the create table so they are omitted
+        if (column.getJdbcTypeName() != null &&
+                (column.getJdbcTypeName().equals("smallmoney")
+                        || column.getJdbcTypeName().equals("money")
+                        || column.getJdbcTypeName().equals("uniqueidentifier")
+                        || column.getJdbcTypeName().equals("date"))
+                || column.getJdbcTypeName().equals("timestamp")) {
+            removePlatformColumnSize(column);
+        }
+        if (column.getJdbcTypeName() != null) {
+            if (column.getJdbcTypeName().equalsIgnoreCase("datetime2")) {
+                adjustColumnSize(column, -20);
+            } else if (column.getJdbcTypeName().equalsIgnoreCase("datetime")) {
+                column.setSize("3");
+                removePlatformColumnSize(column);
+            } else if (column.getJdbcTypeName().equalsIgnoreCase("time")) {
+                adjustColumnSize(column, -9);
+            } else if (column.getJdbcTypeName().equalsIgnoreCase("datetimeoffset")) {
+                adjustColumnSize(column, -27);
+            } else if (column.getJdbcTypeName().equalsIgnoreCase("date") || column.getJdbcTypeName().equalsIgnoreCase("smalldatetime")) {
+                removeColumnSize(column);
+            }
+        }
+        if (userDefinedDataTypes.size() > 0) {
+            if (userDefinedDataTypes.contains(column.getJdbcTypeName())) {
+                removePlatformColumnSize(column);
+                for (PlatformColumn pc : column.getPlatformColumns().values()) {
+                    pc.setUserDefinedType(true);
                 }
             }
         }
-        if (column.isGenerated() && defaultValue == null) {
-            JdbcSqlTemplate sqlTemplate = (JdbcSqlTemplate) platform.getSqlTemplateDirty();
-            String sql = "SELECT definition\n"
-                    + "FROM sys.computed_columns\n"
-                    + "WHERE OBJECT_NAME(object_id) = ?\n"
-                    + "AND name = ?";
-            List<String> l = new ArrayList<String>();
-            l.add((String) values.get("TABLE_NAME"));
-            l.add(column.getName());
-            String definition = sqlTemplate.queryForString(sql, l.toArray());
-            column.setDefaultValue(definition);
-        }
+        return column;
+    }
+
+    protected void parseDefaultValue(Column column) {
+        String defaultValue = column.getDefaultValue();
         // Sql Server tends to surround the returned default value with one or
         // two sets of parentheses
         if (defaultValue != null) {
@@ -324,43 +369,6 @@ public class MsSqlDdlReader extends AbstractJdbcDdlReader {
             }
             column.setDefaultValue(defaultValue);
         }
-        if ((column.getMappedTypeCode() == Types.DECIMAL) && (column.getSizeAsInt() == 19)
-                && (column.getScale() == 0)) {
-            column.setMappedTypeCode(Types.BIGINT);
-        }
-        // These columns return sizes and/or decimal places with the metat data from MSSql Server however
-        // the values are not adjustable through the create table so they are omitted
-        if (column.getJdbcTypeName() != null &&
-                (column.getJdbcTypeName().equals("smallmoney")
-                        || column.getJdbcTypeName().equals("money")
-                        || column.getJdbcTypeName().equals("uniqueidentifier")
-                        || column.getJdbcTypeName().equals("date"))
-                || column.getJdbcTypeName().equals("timestamp")) {
-            removePlatformColumnSize(column);
-        }
-        if (column.getJdbcTypeName() != null) {
-            if (column.getJdbcTypeName().equalsIgnoreCase("datetime2")) {
-                adjustColumnSize(column, -20);
-            } else if (column.getJdbcTypeName().equalsIgnoreCase("datetime")) {
-                column.setSize("3");
-                removePlatformColumnSize(column);
-            } else if (column.getJdbcTypeName().equalsIgnoreCase("time")) {
-                adjustColumnSize(column, -9);
-            } else if (column.getJdbcTypeName().equalsIgnoreCase("datetimeoffset")) {
-                adjustColumnSize(column, -27);
-            } else if (column.getJdbcTypeName().equalsIgnoreCase("date") || column.getJdbcTypeName().equalsIgnoreCase("smalldatetime")) {
-                removeColumnSize(column);
-            }
-        }
-        if (userDefinedDataTypes.size() > 0) {
-            if (userDefinedDataTypes.contains(column.getJdbcTypeName())) {
-                removePlatformColumnSize(column);
-                for (PlatformColumn pc : column.getPlatformColumns().values()) {
-                    pc.setUserDefinedType(true);
-                }
-            }
-        }
-        return column;
     }
 
     @Override
@@ -416,6 +424,7 @@ public class MsSqlDdlReader extends AbstractJdbcDdlReader {
                 + "on TAB.schema_id = SC.schema_id "
                 + "where TAB.name=? and SC.name=? ";
         return sqlTemplate.queryWithHandler(sql, new ISqlRowMapper<Trigger>() {
+            @Override
             public Trigger mapRow(Row row) {
                 Trigger trigger = new Trigger();
                 trigger.setName(row.getString("name"));
@@ -426,23 +435,26 @@ public class MsSqlDdlReader extends AbstractJdbcDdlReader {
                 row.remove("trigger_source");
                 // replace 0 and 1s with true and false
                 for (String s : new String[] { "isupdate", "isdelete", "isinsert", "isafter", "isinsteadof" }) {
-                    if (row.getString(s).equals("0"))
+                    if (row.getString(s).equals("0")) {
                         row.put(s, false);
-                    else
+                    } else {
                         row.put(s, true);
+                    }
                 }
-                if (row.getBoolean("isupdate"))
+                if (row.getBoolean("isupdate")) {
                     trigger.setTriggerType(TriggerType.UPDATE);
-                else if (row.getBoolean("isdelete"))
+                } else if (row.getBoolean("isdelete")) {
                     trigger.setTriggerType(TriggerType.DELETE);
-                else if (row.getBoolean("isinsert"))
+                } else if (row.getBoolean("isinsert")) {
                     trigger.setTriggerType(TriggerType.INSERT);
+                }
                 trigger.setMetaData(row);
                 return trigger;
             }
         }, new ChangeCatalogConnectionHandler(catalog), tableName, schema);
     }
 
+    @Override
     protected IConnectionHandler getConnectionHandler(String catalog) {
         return new ChangeCatalogConnectionHandler(catalog == null ? platform.getDefaultCatalog() : catalog);
     }
@@ -450,10 +462,9 @@ public class MsSqlDdlReader extends AbstractJdbcDdlReader {
     @Override
     protected Collection<IIndex> readIndices(Connection connection,
             DatabaseMetaDataWrapper metaData, String tableName) throws SQLException {
-        Collection<IIndex> cIndex = super.readIndices(connection, metaData, tableName);
+        Collection<IIndex> indices = super.readIndices(connection, metaData, tableName);
         if (platform instanceof MsSql2008DatabasePlatform) {
-            if (cIndex != null && cIndex.size() > 0) {
-                JdbcSqlTemplate sqlTemplate = (JdbcSqlTemplate) platform.getSqlTemplateDirty();
+            if (indices != null && indices.size() > 0) {
                 String sql = "SELECT [TABLENAME] = t.[Name]\n" +
                         "        ,[INDEXNAME] = i.[Name]\n" +
                         "        ,[IndexType] = i.[type_desc]\n" +
@@ -461,71 +472,78 @@ public class MsSqlDdlReader extends AbstractJdbcDdlReader {
                         "        ,[HASFILTER] = i.has_filter\n" +
                         "        ,[COMPRESSIONTYPE] = p.data_compression\n" +
                         "        ,[COMPRESSIONDESCRIPTION] = p.data_compression_desc\n" +
-                        "FROM sys.indexes i\n" +
-                        "INNER JOIN sys.tables t ON t.object_id = i.object_id\n" +
-                        "INNER JOIN sys.partitions p ON p.object_id=t.object_id AND p.index_id=i.index_id\n" +
+                        "FROM sys.indexes i WITH (NOLOCK)\n" +
+                        "INNER JOIN sys.tables t WITH (NOLOCK) ON t.object_id = i.object_id\n" +
+                        "INNER JOIN sys.partitions p WITH (NOLOCK) ON p.object_id=t.object_id AND p.index_id=i.index_id\n" +
                         "WHERE t.type_desc = N'USER_TABLE'\n" +
                         "and t.name=?\n" +
                         "and i.name in (%s)\n" +
                         "and p.index_id > 1";
                 StringBuilder sb = new StringBuilder();
-                for (int i = 0; i < cIndex.size(); i++) {
+                for (int i = 0; i < indices.size(); i++) {
                     if (sb.length() > 0) {
                         sb.append(",");
                     }
                     sb.append("?");
                 }
                 sql = String.format(sql, sb.toString());
-                List<String> l = new ArrayList<String>();
-                l.add(tableName);
-                for (IIndex index : cIndex) {
-                    l.add(index.getName());
-                }
                 log.debug("Running the following query to get metadata about whether an index has compression or filters\n {}", sql);
-                List<Row> filters = sqlTemplate.query(sql, l.toArray());
-                for (Row filter : filters) {
-                    String indexName = filter.getString("INDEXNAME");
-                    IIndex iIndex = findIndex(indexName, cIndex);
-                    if (iIndex != null) {
-                        boolean hasFilter = filter.getBoolean("HASFILTER");
-                        int compressionType = filter.getInt("COMPRESSIONTYPE");
-                        boolean hasCompression = (compressionType > 0);
-                        if (hasFilter || hasCompression) {
-                            PlatformIndex platformIndex = new PlatformIndex();
-                            platformIndex.setName(indexName);
-                            if (hasFilter) {
-                                log.debug("table: " + tableName + " index: " + indexName + " has filter: " + filter.getString("FILTER"));
-                                platformIndex.setFilterCondition("WHERE " + filter.getString("FILTER"));
-                            }
-                            if (hasCompression) {
-                                if (compressionType == 1) {
-                                    log.debug("table: " + tableName + " index: " + indexName + " has compression: " + CompressionTypes.ROW.name());
-                                    platformIndex.setCompressionType(CompressionTypes.ROW);
-                                } else if (compressionType == 2) {
-                                    log.debug("table: " + tableName + " index: " + indexName + " has compression: " + CompressionTypes.PAGE.name());
-                                    platformIndex.setCompressionType(CompressionTypes.PAGE);
-                                } else if (compressionType == 3) {
-                                    log.debug("table: " + tableName + " index: " + indexName + " has compression: " + CompressionTypes.COLUMNSTORE.name());
-                                    platformIndex.setCompressionType(CompressionTypes.COLUMNSTORE);
-                                } else if (compressionType == 4) {
-                                    log.debug("table: " + tableName + " index: " + indexName + " has compression: " + CompressionTypes.COLUMNSTORE_ARCHIVE
-                                            .name());
-                                    platformIndex.setCompressionType(CompressionTypes.COLUMNSTORE_ARCHIVE);
-                                } else {
-                                    platformIndex.setCompressionType(CompressionTypes.NONE);
-                                }
-                            }
-                            iIndex.addPlatformIndex(platformIndex);
+                try (PreparedStatement ps = connection.prepareStatement(sql)) {
+                    int i = 1;
+                    ps.setString(i++, tableName);
+                    for (IIndex index : indices) {
+                        ps.setString(i++, index.getName());
+                    }
+                    try (ResultSet rs = ps.executeQuery()) {
+                        while (rs.next()) {
+                            readIndex(indices, tableName, rs);
                         }
                     }
                 }
             }
         }
-        return cIndex;
+        return indices;
     }
 
-    private IIndex findIndex(String indexName, Collection<IIndex> cIndex) {
-        for (IIndex index : cIndex) {
+    private void readIndex(Collection<IIndex> indices, String tableName, ResultSet rs) throws SQLException {
+        String indexName = rs.getString("INDEXNAME");
+        IIndex iIndex = findIndex(indexName, indices);
+        if (iIndex != null) {
+            boolean hasFilter = rs.getBoolean("HASFILTER");
+            int compressionType = rs.getInt("COMPRESSIONTYPE");
+            boolean hasCompression = (compressionType > 0);
+            if (hasFilter || hasCompression) {
+                PlatformIndex platformIndex = new PlatformIndex();
+                platformIndex.setName(indexName);
+                if (hasFilter) {
+                    log.debug("table: " + tableName + " index: " + indexName + " has filter: " + rs.getString("FILTER"));
+                    platformIndex.setFilterCondition("WHERE " + rs.getString("FILTER"));
+                }
+                if (hasCompression) {
+                    if (compressionType == 1) {
+                        log.debug("table: " + tableName + " index: " + indexName + " has compression: " + CompressionTypes.ROW.name());
+                        platformIndex.setCompressionType(CompressionTypes.ROW);
+                    } else if (compressionType == 2) {
+                        log.debug("table: " + tableName + " index: " + indexName + " has compression: " + CompressionTypes.PAGE.name());
+                        platformIndex.setCompressionType(CompressionTypes.PAGE);
+                    } else if (compressionType == 3) {
+                        log.debug("table: " + tableName + " index: " + indexName + " has compression: " + CompressionTypes.COLUMNSTORE.name());
+                        platformIndex.setCompressionType(CompressionTypes.COLUMNSTORE);
+                    } else if (compressionType == 4) {
+                        log.debug("table: " + tableName + " index: " + indexName + " has compression: " + CompressionTypes.COLUMNSTORE_ARCHIVE
+                                .name());
+                        platformIndex.setCompressionType(CompressionTypes.COLUMNSTORE_ARCHIVE);
+                    } else {
+                        platformIndex.setCompressionType(CompressionTypes.NONE);
+                    }
+                }
+                iIndex.addPlatformIndex(platformIndex);
+            }
+        }
+    }
+
+    private IIndex findIndex(String indexName, Collection<IIndex> indices) {
+        for (IIndex index : indices) {
             if (StringUtils.equals(index.getName(), indexName)) {
                 return index;
             }
@@ -533,6 +551,7 @@ public class MsSqlDdlReader extends AbstractJdbcDdlReader {
         return null;
     }
 
+    @Override
     protected String getWithNoLockHint() {
         return " WITH (NOLOCK) ";
     }
