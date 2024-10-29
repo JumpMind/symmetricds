@@ -25,7 +25,7 @@ public class TableColumnSourceReferences extends ArrayList<TableColumnSourceRefe
             for (int sourceColumnNo = 0; sourceColumnNo < sourceColumns.length; sourceColumnNo++) {
                 Column sourceColumn = sourceColumns[sourceColumnNo];
                 if (StringUtils.equalsIgnoreCase(sourceColumn.getName(), targetColumn.getName())) {
-                    this.add(new ColumnSourceReferenceEntry(sourceColumnNo, targetColumnNo));
+                    this.add(new ColumnSourceReferenceEntry(sourceColumnNo, targetColumnNo, sourceColumn, targetColumn));
                     break;
                 }
             }
@@ -44,8 +44,31 @@ public class TableColumnSourceReferences extends ArrayList<TableColumnSourceRefe
     }
 
     /***
-     * Column mappings to move data efficiently. Used to copy data from source to target.
+     * Compare existing column mappings to target table.
      */
-    public record ColumnSourceReferenceEntry(int sourceColumnNo, int targetColumnNo) {
+    public boolean isMatchingTables(Table sourceTable, Table targetTable) {
+        Column[] targetColumns = targetTable.getColumns();
+        if (targetColumns.length != this.size()) {
+            return false;
+        }
+        Column[] sourceColumns = sourceTable.getColumns();
+        for (int targetColumnNo = 0; targetColumnNo < targetColumns.length; targetColumnNo++) {
+            Column targetColumn = targetColumns[targetColumnNo];
+            ColumnSourceReferenceEntry columnReference = this.get(targetColumnNo);
+            if( !targetColumn.getName().equals(columnReference.targetColumn.getName()) || targetColumnNo != columnReference.targetColumnNo) {
+                return false;
+            }
+            if (columnReference.sourceColumnNo >= sourceColumns.length
+                    || !sourceColumns[columnReference.sourceColumnNo].getName().equals(columnReference.sourceColumn.getName())) {
+                return false;
+            }
+        }
+        return true;
     }
+    
+    /***
+     * Internal class for column mappings to move data efficiently. Column numbers are used to copy data from source to target.
+     */
+    public record ColumnSourceReferenceEntry(int sourceColumnNo, int targetColumnNo, Column sourceColumn, Column targetColumn) {
+    }   
 }
