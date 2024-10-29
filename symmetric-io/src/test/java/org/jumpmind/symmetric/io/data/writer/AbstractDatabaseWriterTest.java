@@ -22,6 +22,7 @@ package org.jumpmind.symmetric.io.data.writer;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertArrayEquals;
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 
@@ -43,72 +44,79 @@ import org.junit.jupiter.api.Test;
 public class AbstractDatabaseWriterTest {
     protected static IDatabasePlatform platform;
     protected DatabaseWriterSettings writerSettings = new DatabaseWriterSettings();
+
+    /**
+     * Helper. Sets all columns in given table to the same data type
+     */
+    public void setTableColumnTypes(Table sourceTable) {
+        for (Column column : sourceTable.getColumnsAsList()) {
+            column.setJdbcTypeCode(Types.VARCHAR);
+            column.setJdbcTypeName("VARCHAR");
+            column.setMappedTypeCode(Types.VARCHAR);
+            column.setMappedType("VARCHAR");
+            column.setSize("100");
+        }
+    }
+
     @Test
     public void testGenerateTableColumnSourceReferences_KeyMatch() {
-        // Arrange
         String[] columnNames = {"c1","c2","c3","c4","c5"};
         String[] keyNames = {"c1","c2" };
         Table sourceTable = new Table("catalog1", "schema1", "table1", columnNames, keyNames);
         Table targetTable = new Table("catalog2", "schema2", "table2", columnNames, keyNames);
         String expectedKey = sourceTable.getFullyQualifiedTableName() + targetTable.getFullyQualifiedTableName(); 
-        // Act
         String key = TableColumnSourceReferences.generateSearchKey(sourceTable, targetTable);
-        // Assert
         assertEquals(expectedKey, key);
     }
 
     @Test
     public void testTableColumnSourceReferences_AllColumnsMatch() {
-        // Arrange
         String[] sourceColumnNames = { "c1", "c2", "c3", "c4", "c5" };
         String[] targetColumnNames = { "c2", "c5", "c3", "c1", "c5" };
         String[] keyNames = { "c1", "c2" };
         Table sourceTable = new Table("catalog1", "schema1", "table1", sourceColumnNames, keyNames);
         Table targetTable = new Table("catalog2", "schema2", "table2", targetColumnNames, keyNames);
-        // Act
-        TableColumnSourceReferences columnDestinations = new TableColumnSourceReferences(sourceTable, targetTable);
-        // Assert
-        assertEquals(sourceColumnNames.length, columnDestinations.size());
-        assertEquals(targetColumnNames.length, columnDestinations.size());
-        for (TableColumnSourceReferences.ColumnSourceReferenceEntry destinationEntry : columnDestinations) {
+        TableColumnSourceReferences columnReferences = new TableColumnSourceReferences(sourceTable, targetTable);
+        assertEquals(sourceColumnNames.length, columnReferences.size());
+        assertEquals(targetColumnNames.length, columnReferences.size());
+        assertTrue(columnReferences.isMatchingTables(sourceTable, targetTable));
+        for (TableColumnSourceReferences.ColumnSourceReferenceEntry destinationEntry : columnReferences) {
             assertEquals(targetColumnNames[destinationEntry.targetColumnNo()], sourceColumnNames[destinationEntry.sourceColumnNo()]);
         }
     }
 
     @Test
     public void testTableColumnSourceReferences_FewColumnsMatchTarget() {
-        // Arrange
         String[] sourceColumnNames = { "c1", "c2", "c3", "c4", "c5" };
         String[] targetColumnNames = { "c2", "c5", "c3", "c1" };
         String[] keyNames = { "c1", "c2" };
         Table sourceTable = new Table("catalog1", "schema1", "table1", sourceColumnNames, keyNames);
         Table targetTable = new Table("catalog2", "schema2", "table2", targetColumnNames, keyNames);
-        // Act
-        TableColumnSourceReferences columnDestinations = new TableColumnSourceReferences(sourceTable, targetTable);
-        // Assert
-        assertNotEquals(sourceColumnNames.length, columnDestinations.size());
-        assertEquals(targetColumnNames.length, columnDestinations.size());
-        for (TableColumnSourceReferences.ColumnSourceReferenceEntry destinationEntry : columnDestinations) {
+        TableColumnSourceReferences columnReferences = new TableColumnSourceReferences(sourceTable, targetTable);
+        assertNotEquals(sourceColumnNames.length, columnReferences.size());
+        assertEquals(targetColumnNames.length, columnReferences.size());
+        assertTrue(columnReferences.isMatchingTables(sourceTable, targetTable));
+        for (TableColumnSourceReferences.ColumnSourceReferenceEntry destinationEntry : columnReferences) {
             assertEquals(targetColumnNames[destinationEntry.targetColumnNo()], sourceColumnNames[destinationEntry.sourceColumnNo()]);
         }
     }
 
     @Test
     public void testGetRowData_FullMatch4Columns() {
-        // Arrange
         String[] sourceColumnNames = { "c1", "c2", "c3", "c4", "c5" };
         String[] targetColumnNames = { "c2", "c5", "c3", "c1" };
         String[] keyNames = { "c1", "c2" };
         Table sourceTable = new Table("catalog1", "schema1", "table1", sourceColumnNames, keyNames);
+        setTableColumnTypes(sourceTable);
         Table targetTable = new Table("catalog2", "schema2", "table2", targetColumnNames, keyNames);
+        setTableColumnTypes(targetTable);
         String[] sourceRowData = { "v1", "v2", "v3", "v4", "v5" };
         String[] expectedRowData = { "v2", "v5", "v3", "v1" };
         CsvData csvData = new CsvData(DataEventType.INSERT, sourceRowData);
-        StubAbstractDatabaseWriter abstractDatabaseWriter = new StubAbstractDatabaseWriter(sourceTable, targetTable);
-        // Act
+        StubAbstractDatabaseWriter abstractDatabaseWriter = new StubAbstractDatabaseWriter();
+        abstractDatabaseWriter.start(sourceTable, targetTable);
         String[] rowData = abstractDatabaseWriter.getRowDataNew(csvData, CsvData.ROW_DATA);
         // String[] rowData = abstractDatabaseWriter.getRowDataOld(csvData, CsvData.ROW_DATA);
-        // Assert
         assertNotNull(rowData);
         assertEquals(targetColumnNames.length, rowData.length);
         assertArrayEquals(expectedRowData, rowData);
@@ -120,7 +128,6 @@ public class AbstractDatabaseWriterTest {
      */
     @Test
     public void testGetRowData_LotsOfRandomAndFewSkippedColumns() {
-         // Arrange
          int sourceColumnCount = 20;
          int skipColumnCount = 5;
          int targetColumnCount = sourceColumnCount - skipColumnCount;
@@ -135,7 +142,7 @@ public class AbstractDatabaseWriterTest {
              sourceColumnNames[columnNo] = String.format("column%d", columnNo);
              sourceRowData[columnNo] = String.format("value%d", columnNo);
              if (columnNo < targetColumnCount) {
-                 // Randomly select source column
+                 // Randomly assign source column
                  int randomSourceColumnNo = randomSourceColumn.nextInt(sourceColumnCount);
                  while (randomSourceColumnSet.contains(randomSourceColumnNo)) {
                      randomSourceColumnNo = randomSourceColumn.nextInt(sourceColumnCount);
@@ -147,17 +154,18 @@ public class AbstractDatabaseWriterTest {
          }
          String[] keyNames = { "column1", "column2" };
          Table sourceTable = new Table("catalog1", "schema1", "table1", sourceColumnNames, keyNames);
+         setTableColumnTypes(sourceTable);
          Table targetTable = new Table("catalog2", "schema2", "table2", targetColumnNames, keyNames);
+         setTableColumnTypes(targetTable);
          CsvData csvData = new CsvData(DataEventType.INSERT, sourceRowData);
-         StubAbstractDatabaseWriter abstractDatabaseWriter = new StubAbstractDatabaseWriter(sourceTable, targetTable);
-         // Act
+         StubAbstractDatabaseWriter abstractDatabaseWriter = new StubAbstractDatabaseWriter();
+         abstractDatabaseWriter.start(sourceTable, targetTable);
          String[] rowData = null;
          long startTime = System.currentTimeMillis();
          for (int rowNo = 0; rowNo < maxRows; rowNo++) {
              rowData = abstractDatabaseWriter.getRowDataNew(csvData, CsvData.ROW_DATA);
              // rowData = abstractDatabaseWriter.getRowDataOld(csvData, CsvData.ROW_DATA);
          }
-         // Assert
          assertNotNull(rowData);
          assertEquals(targetColumnNames.length, rowData.length);
          assertArrayEquals(expectedRowData, rowData);
@@ -166,28 +174,35 @@ public class AbstractDatabaseWriterTest {
          abstractDatabaseWriter.close();
      }
 
+     @Test
+     public void testClearTargetColumnReferencesMap() {
+         String[] sourceColumnNames = { "c1", "c2", "c3", "c4", "c5" };
+         String[] targetColumnNames = { "c2", "c5", "c3", "c1" };
+         String[] keyNames = { "c1", "c2" };
+         Table sourceTable = new Table("catalog1", "schema1", "table1", sourceColumnNames, keyNames);
+         setTableColumnTypes(sourceTable);
+         Table targetTable = new Table("catalog2", "schema2", "table2", targetColumnNames, keyNames);
+         setTableColumnTypes(targetTable);
+         StubAbstractDatabaseWriter abstractDatabaseWriter = new StubAbstractDatabaseWriter();
+         assertEquals(0, abstractDatabaseWriter.getTargetColumnReferencesMapSize());
+         abstractDatabaseWriter.start(sourceTable, targetTable);
+         assertEquals(1, abstractDatabaseWriter.getTargetColumnReferencesMapSize());
+         abstractDatabaseWriter.clearTargetColumnReferencesMap();
+         assertEquals(0, abstractDatabaseWriter.getTargetColumnReferencesMapSize());
+         abstractDatabaseWriter.getTargetColumnReferencesMap();
+         assertEquals(1, abstractDatabaseWriter.getTargetColumnReferencesMapSize());
+         abstractDatabaseWriter.clearTargetColumnReferencesMap();
+         assertEquals(0, abstractDatabaseWriter.getTargetColumnReferencesMapSize());
+         abstractDatabaseWriter.refreshTargetColumnReferencesMap();
+         assertEquals(1, abstractDatabaseWriter.getTargetColumnReferencesMapSize());
+     }
+
      /***
       * Test wrapper class for the AbstractDatabaseWriter class Includes a copy of the older code (getRowDataOld) - before optimization.
       */
      protected class StubAbstractDatabaseWriter extends AbstractDatabaseWriter {
-         public StubAbstractDatabaseWriter(Table sourceTable, Table targetTable) {
+         public StubAbstractDatabaseWriter() {
              super();
-             for (Column column : sourceTable.getColumnsAsList()) {
-                 column.setJdbcTypeCode(Types.VARCHAR);
-                 column.setJdbcTypeName("VARCHAR");
-                 column.setMappedTypeCode(Types.VARCHAR);
-                 column.setMappedType("VARCHAR");
-                 column.setSize("100");
-             }
-             for (Column column : targetTable.getColumnsAsList()) {
-                 column.setJdbcTypeCode(Types.VARCHAR);
-                 column.setJdbcTypeName("VARCHAR");
-                 column.setMappedTypeCode(Types.VARCHAR);
-                 column.setMappedType("VARCHAR");
-                 column.setSize("100");
-             }
-             this.targetTable = targetTable;
-             start(sourceTable);
          }
 
          public String[] getRowDataNew(CsvData data, String dataType) {
@@ -212,6 +227,18 @@ public class AbstractDatabaseWriterTest {
              } else {
                  return null;
              }
+         }
+
+         protected int getTargetColumnReferencesMapSize() {
+             return this.targetColumnSourceReferencesMap.size();
+         }
+
+
+         protected void start(Table sourceTable, Table targetTable) {
+             super.start(sourceTable);
+             clearTargetColumnReferencesMap();
+             this.targetTable = targetTable;
+             refreshTargetColumnReferencesMap();
          }
 
          @Override

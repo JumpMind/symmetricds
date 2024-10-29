@@ -114,7 +114,7 @@ abstract public class AbstractDatabaseWriter implements IDataWriter {
         if (this.targetTable == null && hasFilterThatHandlesMissingTable(table)) {
             this.targetTable = table;
         }
-        clearTargetColumnReferencesMap();
+        refreshTargetColumnReferencesMap();
         /* The first data that requires a target table should fail because the table will not be found */
         return true;
     }
@@ -165,7 +165,6 @@ abstract public class AbstractDatabaseWriter implements IDataWriter {
                                 }
                                 break;
                             default:
-                                clearTargetColumnReferencesMap();
                                 break;
                         }
                         if (isRequiresSavePointsInTransaction && conflictResolver != null) {
@@ -451,10 +450,33 @@ abstract public class AbstractDatabaseWriter implements IDataWriter {
         String key = TableColumnSourceReferences.generateSearchKey(this.sourceTable, this.targetTable);
         TableColumnSourceReferences columnReferences = this.targetColumnSourceReferencesMap.get(key);
         if (columnReferences == null) {
-            columnReferences = new TableColumnSourceReferences(this.sourceTable, this.targetTable);
-            this.targetColumnSourceReferencesMap.put(key, columnReferences);
+            return buildTargetColumnReferencesMap(key);
         }
         return columnReferences;
+    }
+
+    /**
+     * Builds new column mappings and saves it to the cache.
+     */
+    protected TableColumnSourceReferences buildTargetColumnReferencesMap(String key) {
+        TableColumnSourceReferences columnReferences = new TableColumnSourceReferences(this.sourceTable, this.targetTable);
+        this.targetColumnSourceReferencesMap.put(key, columnReferences);
+        return columnReferences;
+    }
+
+    /**
+     * Verifies that column mapping cache is up-to date. Rebuilds column mappings, if mismatch is detected.
+     */
+    protected void refreshTargetColumnReferencesMap() {
+        if (this.targetTable == null) {
+            return;
+        }
+        String key = TableColumnSourceReferences.generateSearchKey(this.sourceTable, this.targetTable);
+        TableColumnSourceReferences columnReferences = this.targetColumnSourceReferencesMap.get(key);
+        if (columnReferences == null || !columnReferences.isMatchingTables(this.sourceTable, this.targetTable)) {
+            buildTargetColumnReferencesMap(key);
+            return;
+        }
     }
 
     /**
