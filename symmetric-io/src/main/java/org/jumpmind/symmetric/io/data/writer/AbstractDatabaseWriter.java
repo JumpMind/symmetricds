@@ -29,6 +29,7 @@ import java.util.Set;
 
 import org.jumpmind.db.model.Column;
 import org.jumpmind.db.model.Table;
+import org.jumpmind.db.model.TableColumnSourceReferences;
 import org.jumpmind.db.sql.SqlException;
 import org.jumpmind.db.sql.TableNotFoundException;
 import org.jumpmind.exception.ParseException;
@@ -71,6 +72,7 @@ abstract public class AbstractDatabaseWriter implements IDataWriter {
     protected Map<Batch, Statistics> statistics = new HashMap<Batch, Statistics>();
     protected IDatabaseWriterConflictResolver conflictResolver;
     protected Set<String> missingTables = new HashSet<String>();
+    protected Map<String, TableColumnSourceReferences> targetColumnSourceReferencesMap = new HashMap<String, TableColumnSourceReferences>();
 
     public AbstractDatabaseWriter() {
         this(null, null);
@@ -87,10 +89,12 @@ abstract public class AbstractDatabaseWriter implements IDataWriter {
         this.writerSettings = settings == null ? new DatabaseWriterSettings() : settings;
     }
 
+    @Override
     public void open(DataContext context) {
         this.context = context;
     }
 
+    @Override
     public void start(Batch batch) {
         this.batch = batch;
         this.batch.setBulkLoaderFlag(false);
@@ -98,6 +102,7 @@ abstract public class AbstractDatabaseWriter implements IDataWriter {
         this.statistics.get(batch).set(DataWriterStatisticConstants.STARTTIME, new Date().getTime());
     }
 
+    @Override
     public boolean start(Table table) {
         if (table == null) {
             throw new NullPointerException("Cannot load a null table");
@@ -109,10 +114,12 @@ abstract public class AbstractDatabaseWriter implements IDataWriter {
         if (this.targetTable == null && hasFilterThatHandlesMissingTable(table)) {
             this.targetTable = table;
         }
+        refreshTargetColumnReferencesMap();
         /* The first data that requires a target table should fail because the table will not be found */
         return true;
     }
 
+    @Override
     public void write(CsvData data) {
         context.remove(AbstractDatabaseWriter.CONFLICT_ERROR);
         /*
@@ -412,24 +419,71 @@ abstract public class AbstractDatabaseWriter implements IDataWriter {
 
     protected abstract void logFailureDetails(Throwable e, CsvData data, boolean logLastDmlDetails);
 
+    /***
+     * Parses source data and returns string array with values in same positions as target columns.
+     * 
+     * @param data
+     *            CsvData from the source
+     * @param dataType
+     *            CsvData type constant. Example: CsvData.ROW_DATA, CsvData.OLD_DATA
+     * @return Values for target columns (as strings)
+     */
     protected String[] getRowData(CsvData data, String dataType) {
         String[] targetValues = new String[targetTable.getColumnCount()];
-        String[] targetColumnNames = targetTable.getColumnNames();
         String[] originalValues = data.getParsedData(dataType);
-        String[] sourceColumnNames = sourceTable.getColumnNames();
-        if (originalValues != null) {
-            for (int i = 0; i < sourceColumnNames.length && i < originalValues.length; i++) {
-                for (int t = 0; t < targetColumnNames.length; t++) {
-                    if (sourceColumnNames[i].equalsIgnoreCase(targetColumnNames[t])) {
-                        targetValues[t] = originalValues[i];
-                        break;
-                    }
-                }
-            }
-            return targetValues;
-        } else {
+        if (originalValues == null) {
             return null;
         }
+        TableColumnSourceReferences columnReferences = this.getTargetColumnReferencesMap();
+        for (TableColumnSourceReferences.ColumnSourceReferenceEntry referenceEntry : columnReferences) {
+            if (referenceEntry.sourceColumnNo() < originalValues.length) {
+                targetValues[referenceEntry.targetColumnNo()] = originalValues[referenceEntry.sourceColumnNo()];
+            }
+        }
+        return targetValues;
+    }
+
+    /**
+     * Looks up column mappings in the cache (or generates them). Used to quickly copy data from source columns into target columns.
+     */
+    protected TableColumnSourceReferences getTargetColumnReferencesMap() {
+        String key = TableColumnSourceReferences.generateSearchKey(this.sourceTable, this.targetTable);
+        TableColumnSourceReferences columnReferences = this.targetColumnSourceReferencesMap.get(key);
+        if (columnReferences == null) {
+            return buildTargetColumnReferencesMap(key);
+        }
+        return columnReferences;
+    }
+
+    /**
+     * Builds new column mappings and saves it to the cache.
+     */
+    protected TableColumnSourceReferences buildTargetColumnReferencesMap(String key) {
+        TableColumnSourceReferences columnReferences = new TableColumnSourceReferences(this.sourceTable, this.targetTable);
+        this.targetColumnSourceReferencesMap.put(key, columnReferences);
+        return columnReferences;
+    }
+
+    /**
+     * Verifies that column mapping cache is up-to date. Rebuilds column mappings, if mismatch is detected.
+     */
+    protected void refreshTargetColumnReferencesMap() {
+        if (this.targetTable == null) {
+            return;
+        }
+        String key = TableColumnSourceReferences.generateSearchKey(this.sourceTable, this.targetTable);
+        TableColumnSourceReferences columnReferences = this.targetColumnSourceReferencesMap.get(key);
+        if (columnReferences == null || !columnReferences.isMatchingTables(this.sourceTable, this.targetTable)) {
+            buildTargetColumnReferencesMap(key);
+            return;
+        }
+    }
+
+    /**
+     * Clears column mapping cache. Used when DDL changes impact column definitions.
+     */
+    protected void clearTargetColumnReferencesMap() {
+        this.targetColumnSourceReferencesMap.clear();
     }
 
     protected void bindVariables(Map<String, Object> variables) {
@@ -498,9 +552,11 @@ abstract public class AbstractDatabaseWriter implements IDataWriter {
         return null;
     }
 
+    @Override
     public void end(Table table) {
     }
 
+    @Override
     public void end(Batch batch, boolean inError) {
         this.lastData = null;
         if (batch.isIgnored()) {
@@ -514,7 +570,9 @@ abstract public class AbstractDatabaseWriter implements IDataWriter {
         }
     }
 
+    @Override
     public void close() {
+        this.targetColumnSourceReferencesMap.clear();
     }
 
     protected boolean hasFilterThatHandlesMissingTable(Table table) {
@@ -559,6 +617,7 @@ abstract public class AbstractDatabaseWriter implements IDataWriter {
         return sourceTable;
     }
 
+    @Override
     public Map<Batch, Statistics> getStatistics() {
         return statistics;
     }
