@@ -159,47 +159,97 @@ public class ModelComparator {
     public List<IModelChange> compareTables(Database sourceModel, Table sourceTable,
             Database targetModel, Table targetTable) {
         ArrayList<IModelChange> changes = new ArrayList<IModelChange>();
-        if (platformInfo.isForeignKeysSupported()) {
-            for (int fkIdx = 0; fkIdx < sourceTable.getForeignKeyCount(); fkIdx++) {
-                ForeignKey sourceFk = sourceTable.getForeignKey(fkIdx);
-                ForeignKey targetFk = findCorrespondingForeignKey(targetTable, sourceFk);
-                if (targetFk == null) {
-                    log.info("{} needs to be removed from table {}", sourceFk, sourceTable.getName());
-                    changes.add(new RemoveForeignKeyChange(sourceTable, sourceFk));
-                }
-            }
-            for (int fkIdx = 0; fkIdx < targetTable.getForeignKeyCount(); fkIdx++) {
-                ForeignKey targetFk = targetTable.getForeignKey(fkIdx);
-                ForeignKey sourceFk = findCorrespondingForeignKey(sourceTable, targetFk);
-                if (sourceFk == null) {
-                    log.info("{} needs to be created for table {}", targetFk, sourceTable.getName());
-                    /*
-                     * we have to use the target table here because the foreign key might reference a new column
-                     */
-                    changes.add(new AddForeignKeyChange(targetTable, targetFk));
-                }
+        detectLoggingChanges(sourceModel, sourceTable, targetModel, targetTable, changes);
+        detectForeignKeyChanges(sourceModel, sourceTable, targetModel, targetTable, changes);
+        detectIndexChanges(sourceModel, sourceTable, targetModel, targetTable, changes);
+        detectColumnChanges(sourceModel, sourceTable, targetModel, targetTable, changes);
+        detectPrimaryKeyChanges(sourceModel, sourceTable, targetModel, targetTable, changes);
+        return changes;
+    }
+
+    /**
+     * Compares tables and appends detected logging mode changes (necessary to create the targetTable from the sourceTable) to specified list.
+     */
+    public void detectLoggingChanges(Database sourceModel, Table sourceTable,
+            Database targetModel, Table targetTable, ArrayList<IModelChange> changes) {
+        if (!platformInfo.isTableLevelLoggingSupported()) {
+            return;
+        }
+        if (sourceTable.getLogging() == targetTable.getLogging()) {
+            log.debug("Logging mode remains unchanged for table {}", sourceTable.getName());
+            return;
+        }
+        if (!sourceTable.getLogging() && targetTable.getLogging()) {
+            log.debug("Logging needs to be added to table {}", sourceTable.getName());
+            changes.add(new AddTableLoggingChange(sourceTable));
+            return;
+        }
+        log.debug("Logging needs to be removed from table {}", sourceTable.getName());
+        changes.add(new RemoveTableLoggingChange(sourceTable));
+    }
+
+    /**
+     * Compares tables and appends detected ForeignKey changes (necessary to create the targetTable from the sourceTable) to specified list.
+     */
+    public void detectForeignKeyChanges(Database sourceModel, Table sourceTable,
+            Database targetModel, Table targetTable, ArrayList<IModelChange> changes) {
+        if (!platformInfo.isForeignKeysSupported()) {
+            return;
+        }
+        for (int fkIdx = 0; fkIdx < sourceTable.getForeignKeyCount(); fkIdx++) {
+            ForeignKey sourceFk = sourceTable.getForeignKey(fkIdx);
+            ForeignKey targetFk = findCorrespondingForeignKey(targetTable, sourceFk);
+            if (targetFk == null) {
+                log.info("{} needs to be removed from table {}", sourceFk, sourceTable.getName());
+                changes.add(new RemoveForeignKeyChange(sourceTable, sourceFk));
             }
         }
-        if (platformInfo.isIndicesSupported()) {
-            for (int indexIdx = 0; indexIdx < sourceTable.getIndexCount(); indexIdx++) {
-                IIndex sourceIndex = sourceTable.getIndex(indexIdx);
-                IIndex targetIndex = findCorrespondingIndex(targetTable, sourceIndex);
-                if (targetIndex == null) {
-                    log.info("Index {} needs to be removed from table {}", sourceIndex.getName(), sourceTable.getName());
-                    changes.add(new RemoveIndexChange(sourceTable, sourceIndex));
-                }
-            }
-            for (int indexIdx = 0; indexIdx < targetTable.getIndexCount(); indexIdx++) {
-                IIndex targetIndex = targetTable.getIndex(indexIdx);
-                IIndex sourceIndex = findCorrespondingIndex(sourceTable, targetIndex);
-                if (sourceIndex == null) {
-                    log.info("Index {} needs to be created for table {}", targetIndex.getName(), sourceTable.getName());
-                    // we have to use the target table here because the index might
-                    // reference a new column
-                    changes.add(new AddIndexChange(targetTable, targetIndex));
-                }
+        for (int fkIdx = 0; fkIdx < targetTable.getForeignKeyCount(); fkIdx++) {
+            ForeignKey targetFk = targetTable.getForeignKey(fkIdx);
+            ForeignKey sourceFk = findCorrespondingForeignKey(sourceTable, targetFk);
+            if (sourceFk == null) {
+                log.info("{} needs to be created for table {}", targetFk, sourceTable.getName());
+                /*
+                 * we have to use the target table here because the foreign key might reference a new column
+                 */
+                changes.add(new AddForeignKeyChange(targetTable, targetFk));
             }
         }
+    }
+
+    /**
+     * Compares tables and appends detected index changes (necessary to create the targetTable from the sourceTable) to specified list.
+     */
+    public void detectIndexChanges(Database sourceModel, Table sourceTable,
+            Database targetModel, Table targetTable, ArrayList<IModelChange> changes) {
+        if (!platformInfo.isIndicesSupported()) {
+            return;
+        }
+        for (int indexIdx = 0; indexIdx < sourceTable.getIndexCount(); indexIdx++) {
+            IIndex sourceIndex = sourceTable.getIndex(indexIdx);
+            IIndex targetIndex = findCorrespondingIndex(targetTable, sourceIndex);
+            if (targetIndex == null) {
+                log.info("Index {} needs to be removed from table {}", sourceIndex.getName(), sourceTable.getName());
+                changes.add(new RemoveIndexChange(sourceTable, sourceIndex));
+            }
+        }
+        for (int indexIdx = 0; indexIdx < targetTable.getIndexCount(); indexIdx++) {
+            IIndex targetIndex = targetTable.getIndex(indexIdx);
+            IIndex sourceIndex = findCorrespondingIndex(sourceTable, targetIndex);
+            if (sourceIndex == null) {
+                log.info("Index {} needs to be created for table {}", targetIndex.getName(), sourceTable.getName());
+                // we have to use the target table here because the index might
+                // reference a new column
+                changes.add(new AddIndexChange(targetTable, targetIndex));
+            }
+        }
+    }
+
+    /**
+     * Compares tables and appends detected column changes (necessary to create the targetTable from the sourceTable) to specified list.
+     */
+    public void detectColumnChanges(Database sourceModel, Table sourceTable,
+            Database targetModel, Table targetTable, ArrayList<IModelChange> changes) {
         HashMap<Column, TableChange> addColumnChanges = new HashMap<Column, TableChange>();
         for (int columnIdx = 0; columnIdx < targetTable.getColumnCount(); columnIdx++) {
             Column targetColumn = targetTable.getColumn(columnIdx);
@@ -229,6 +279,13 @@ public class ModelComparator {
                 change.setAtEnd(true);
             }
         }
+    }
+
+    /**
+     * Compares tables and appends detected primary key & related column changes (necessary to create the targetTable from the sourceTable) to specified list.
+     */
+    public void detectPrimaryKeyChanges(Database sourceModel, Table sourceTable,
+            Database targetModel, Table targetTable, ArrayList<IModelChange> changes) {
         Column[] sourcePK = sourceTable.getPrimaryKeyColumnsInIndexOrder();
         Column[] targetPK = targetTable.getPrimaryKeyColumnsInIndexOrder();
         if ((sourcePK.length == 0) && (targetPK.length > 0)) {
@@ -267,7 +324,6 @@ public class ModelComparator {
                 changes.add(new RemoveColumnChange(sourceTable, sourceColumn));
             }
         }
-        return changes;
     }
 
     /**

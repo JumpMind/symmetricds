@@ -48,6 +48,7 @@ import java.util.regex.Pattern;
 
 import org.apache.commons.lang3.StringUtils;
 import org.jumpmind.db.alter.AddColumnChange;
+import org.jumpmind.db.alter.AddTableLoggingChange;
 import org.jumpmind.db.alter.ColumnAutoIncrementChange;
 import org.jumpmind.db.alter.ColumnDataTypeChange;
 import org.jumpmind.db.alter.ColumnDefaultValueChange;
@@ -56,6 +57,7 @@ import org.jumpmind.db.alter.ColumnSizeChange;
 import org.jumpmind.db.alter.CopyColumnValueChange;
 import org.jumpmind.db.alter.PrimaryKeyChange;
 import org.jumpmind.db.alter.RemoveColumnChange;
+import org.jumpmind.db.alter.RemoveTableLoggingChange;
 import org.jumpmind.db.alter.TableChange;
 import org.jumpmind.db.model.Column;
 import org.jumpmind.db.model.ColumnTypes;
@@ -141,6 +143,7 @@ public class PostgreSqlDdlBuilder extends AbstractDdlBuilder {
         addEscapedCharSequence("\t", "\\t");
     }
 
+    @Override
     public String mapDefaultValue(Object defaultValue, Column column) {
         String newValue = super.mapDefaultValue(defaultValue, column);
         if (databaseInfo.getDefaultValuesToTranslate().containsKey(defaultValue.toString())) {
@@ -246,6 +249,18 @@ public class PostgreSqlDdlBuilder extends AbstractDdlBuilder {
             }
         }
         super.createTable(table, ddl, temporary, recreate);
+    }
+
+    /**
+     * Supports an optional UNLOGGED trait when building new create table statement.
+     */
+    @Override
+    protected void writeTableCreateOpeningStmt(Table table, StringBuilder ddl) {
+        ddl.append("CREATE");
+        if (!table.getLogging() && this.databaseInfo.isTableLevelLoggingSupported()) {
+            ddl.append(" UNLOGGED");
+        }
+        ddl.append(" TABLE ");
     }
 
     /*
@@ -390,7 +405,13 @@ public class PostgreSqlDdlBuilder extends AbstractDdlBuilder {
             Table sourceTable, Table targetTable, List<TableChange> changes, StringBuilder ddl) {
         for (Iterator<TableChange> changeIt = changes.iterator(); changeIt.hasNext();) {
             TableChange change = changeIt.next();
-            if (change instanceof AddColumnChange) {
+            if (change instanceof AddTableLoggingChange) {
+                processChange(currentModel, desiredModel, (AddTableLoggingChange) change, ddl);
+                changeIt.remove();
+            } else if (change instanceof RemoveTableLoggingChange) {
+                processChange(currentModel, desiredModel, (RemoveTableLoggingChange) change, ddl);
+                changeIt.remove();
+            } else if (change instanceof AddColumnChange) {
                 AddColumnChange addColumnChange = (AddColumnChange) change;
                 processChange(currentModel, desiredModel, addColumnChange, ddl);
                 changeIt.remove();
@@ -464,6 +485,32 @@ public class PostgreSqlDdlBuilder extends AbstractDdlBuilder {
         if (change.getColumn().isAutoIncrement()) {
             dropAutoIncrementSequence(change.getChangedTable(), change.getColumn(), ddl);
         }
+        change.apply(currentModel, delimitedIdentifierModeOn);
+    }
+
+    /*
+     * Processes the addition of table-level transaction logging.
+     */
+    @Override
+    protected void processChange(Database currentModel, Database desiredModel,
+            AddTableLoggingChange change, StringBuilder ddl) {
+        writeTableAlterStmt(change.getChangedTable(), ddl);
+        printIndent(ddl);
+        ddl.append(" SET LOGGED");
+        printEndOfStatement(ddl);
+        change.apply(currentModel, delimitedIdentifierModeOn);
+    }
+
+    /*
+     * Processes the removal of table-level transaction logging.
+     */
+    @Override
+    protected void processChange(Database currentModel, Database desiredModel,
+            RemoveTableLoggingChange change, StringBuilder ddl) {
+        writeTableAlterStmt(change.getChangedTable(), ddl);
+        printIndent(ddl);
+        ddl.append(" SET UNLOGGED");
+        printEndOfStatement(ddl);
         change.apply(currentModel, delimitedIdentifierModeOn);
     }
 

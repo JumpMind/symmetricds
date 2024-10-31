@@ -63,47 +63,101 @@ public class PostgreSqlDdlReader extends AbstractJdbcDdlReader {
     protected Table readTable(Connection connection, DatabaseMetaDataWrapper metaData,
             Map<String, Object> values) throws SQLException {
         Table table = super.readTable(connection, metaData, values);
-        if (table != null) {
-            // PostgreSQL also returns unique indices for non-pk auto-increment
-            // columns which are of the form "[table]_[column]_key"
-            HashMap<String, IIndex> uniquesByName = new HashMap<String, IIndex>();
-            for (int indexIdx = 0; indexIdx < table.getIndexCount(); indexIdx++) {
-                IIndex index = table.getIndex(indexIdx);
-                if (index.isUnique() && (index.getName() != null)) {
-                    uniquesByName.put(index.getName(), index);
-                }
-            }
-            for (int columnIdx = 0; columnIdx < table.getColumnCount(); columnIdx++) {
-                Column column = table.getColumn(columnIdx);
-                if (column.isAutoIncrement() && !column.isPrimaryKey()) {
-                    String indexName = table.getName() + "_" + column.getName() + "_key";
-                    if (uniquesByName.containsKey(indexName)) {
-                        table.removeIndex((IIndex) uniquesByName.get(indexName));
-                        uniquesByName.remove(indexName);
-                    }
-                }
-            }
-            setPrimaryKeyConstraintName(connection, table);
+        if (table == null) {
+            return null;
         }
+        detectAutoIncrementColumnsInUniqueIndices(table);
+        readMetaDataAndPrimaryKeyConstraint(connection, table);
         return table;
     }
 
-    protected void setPrimaryKeyConstraintName(Connection connection, Table table) throws SQLException {
-        String sql = "select conname from pg_constraint where conrelid in (select oid from pg_class where relname=? and relnamespace in (select oid from pg_namespace where nspname=?)) and contype='p'";
-        PreparedStatement pstmt = null;
+    /**
+     * Detect and filter out PostgreSQL-specific unique indices for non-pk auto-increment columns which are of the form "[table]_[column]_key"
+     */
+    protected void detectAutoIncrementColumnsInUniqueIndices(Table table) {
+        HashMap<String, IIndex> uniquesByName = new HashMap<String, IIndex>();
+        for (int indexIdx = 0; indexIdx < table.getIndexCount(); indexIdx++) {
+            IIndex index = table.getIndex(indexIdx);
+            if (index.isUnique() && (index.getName() != null)) {
+                uniquesByName.put(index.getName(), index);
+            }
+        }
+        for (int columnIdx = 0; columnIdx < table.getColumnCount(); columnIdx++) {
+            Column column = table.getColumn(columnIdx);
+            if (column.isAutoIncrement() && !column.isPrimaryKey()) {
+                String indexName = table.getName() + "_" + column.getName() + "_key";
+                if (uniquesByName.containsKey(indexName)) {
+                    table.removeIndex(uniquesByName.get(indexName));
+                    uniquesByName.remove(indexName);
+                }
+            }
+        }
+    }
+
+    /**
+     * Reads additional information about the table (meta data) in one round-trip to the database.
+     * <ul>
+     * <li>Name of the Primary key constraint</li>
+     * <li>LOGGED mode (true/false)</li>
+     * </ul>
+     */
+    protected void readMetaDataAndPrimaryKeyConstraint(Connection connection, Table table) throws SQLException {
+        long startTime = System.currentTimeMillis();
+        final String TRAIT_LOGGING_MODE = "LOGGING_MODE";
+        final String TRAIT_PRIMARY_KEY_NAME = "PRIMARY_KEY_NAME";
+        StringBuilder sqlBuilder = new StringBuilder(1000);
+        sqlBuilder.append("WITH table_object AS ( ")
+                .append("    select n.nspname as nsp_name, n.oid as nsp_oid ")
+                .append("    , t.relname as table_name, t.oid as table_oid ")
+                .append("    , t.relpersistence ")
+                .append(" FROM pg_class t ")
+                .append(" JOIN pg_namespace n")
+                .append(" on n.oid=t.relnamespace and n.nspname = ? ")
+                .append(" WHERE t.relname = ? ")
+                .append(" ) \n")
+                .append("SELECT '")
+                .append(TRAIT_LOGGING_MODE)
+                .append("' as trait")
+                .append(" ,CASE relpersistence WHEN 'p' THEN 'true' else 'false' end as value")
+                .append(" FROM table_object")
+                .append("\nUNION ALL\n")
+                .append("SELECT '")
+                .append(TRAIT_PRIMARY_KEY_NAME)
+                .append("' as trait")
+                .append(" ,conname as value")
+                .append(" FROM pg_constraint")
+                .append(" WHERE contype='p'")
+                .append(" and conrelid in (select table_oid from table_object)")
+                .append(";");
+        PreparedStatement ps = null;
         ResultSet rs = null;
         try {
-            pstmt = connection.prepareStatement(sql);
-            pstmt.setString(1, table.getName());
-            pstmt.setString(2, table.getSchema());
-            rs = pstmt.executeQuery();
-            if (rs.next()) {
-                table.setPrimaryKeyConstraintName(rs.getString(1).trim());
+            ps = connection.prepareStatement(sqlBuilder.toString());
+            ps.setString(1, table.getSchema());
+            ps.setString(2, table.getName());
+            rs = ps.executeQuery();
+            while (rs.next()) {
+                String traitName = rs.getString(1).trim();
+                String traitValue = rs.getString(2).trim();
+                switch (traitName) {
+                    case TRAIT_LOGGING_MODE:
+                        table.setLogging("true".equals(traitValue));
+                        break;
+                    case TRAIT_PRIMARY_KEY_NAME:
+                        table.setPrimaryKeyConstraintName(traitValue);
+                        break;
+                    default:
+                        log.warn(String.format("readMetaDataAndPrimaryKeyConstraint - Ignored an unrecognized trait=%s; Table=%s", traitName, table.getName()));
+                        break;
+                }
             }
         } finally {
             JdbcSqlTemplate.close(rs);
-            JdbcSqlTemplate.close(pstmt);
+            JdbcSqlTemplate.close(ps);
         }
+        long durationInMillis = System.currentTimeMillis() - startTime;
+        log.debug(String.format("readMetaDataAndPrimaryKeyConstraint - Done. Table=%s; Logging=%b; Duration=%d ms", table.getName(), table.getLogging()
+                , durationInMillis));
     }
 
     @Override
@@ -267,7 +321,7 @@ public class PostgreSqlDdlReader extends AbstractJdbcDdlReader {
     protected void readForeignKey(DatabaseMetaDataWrapper metaData, Map<String, Object> values,
             Map<String, ForeignKey> knownFks) throws SQLException {
         String fkName = (String) values.get(getName("FK_NAME"));
-        ForeignKey fk = (ForeignKey) knownFks.get(fkName);
+        ForeignKey fk = knownFks.get(fkName);
         if (fk == null) {
             fk = new ForeignKey(fkName);
             fk.setForeignTableName((String) values.get(getName("PKTABLE_NAME")));
@@ -332,6 +386,7 @@ public class PostgreSqlDdlReader extends AbstractJdbcDdlReader {
                 + "ON pgproc.oid=pgtrig.tgfoid "
                 + "WHERE event_object_table=? AND event_object_schema=?;";
         triggers = sqlTemplate.query(sql, new ISqlRowMapper<Trigger>() {
+            @Override
             public Trigger mapRow(Row row) {
                 Trigger trigger = new Trigger();
                 trigger.setName(row.getString("trigger_name"));
