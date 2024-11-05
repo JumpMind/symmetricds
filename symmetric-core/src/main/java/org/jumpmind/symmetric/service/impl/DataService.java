@@ -1464,16 +1464,17 @@ public class DataService extends AbstractService implements IDataService {
             requests.putAll(extractRequests);
         }
         String sourceNodeId = engine.getNodeService().findIdentity().getNodeId();
+        String tablePrefix = engine.getParameterService().getTablePrefix().toLowerCase();
         long firstBatchId = 0;
         long totalDataCount = 0;
         for (TriggerHistory triggerHist : triggerHistories) {
-            if (!triggerHist.getTriggerId().startsWith("sym")) {
+            if (!triggerHist.getTriggerId().startsWith(tablePrefix)) {
                 totalDataCount = totalDataCount + 1;
             }
         }
         processInfo.setTotalDataCount(totalDataCount);
         for (TriggerHistory triggerHistory : triggerHistories) {
-            if (!triggerHistory.getSourceTableName().toLowerCase().startsWith("sym")) {
+            if (!triggerHistory.getSourceTableNameLowerCase().startsWith(tablePrefix)) {
                 processInfo.incrementCurrentDataCount();
             }
             List<TriggerRouter> triggerRouters = triggerRoutersByHistoryId.get(triggerHistory
