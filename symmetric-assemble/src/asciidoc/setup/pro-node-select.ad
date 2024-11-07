@@ -10,20 +10,12 @@ serves as the central place where configuration is done.  All configuration is s
 . *Join Existing Replication* - All other nodes join existing replication by registering with the primary node,
 where they receive a copy of the configuration and learn about other nodes.
 
-A third option will perform the *Setup Demo* installation, which does the following:
-
-. Creates two example databases
-. Creates a primary node attached to the server database
-. Creates a secondary node attached to the client database
-. Configures synchronization of the two databases
-. Randomly executes insert, update, and delete statements on the database to show activity
-
 [.float-group]
 --
 [.left.text-left]
 .Node selection.
 image::images/wizard-node-setup.png[]
 
-Select whether the node will setup a new replication, join an existing replication, or run a demonstration.
+Select whether the node will setup a new replication or join an existing replication.
 
 --

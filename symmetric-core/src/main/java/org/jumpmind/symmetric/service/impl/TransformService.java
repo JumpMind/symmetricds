@@ -26,6 +26,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Map.Entry;
 import java.util.stream.Collectors;
 
 import org.apache.commons.collections4.CollectionUtils;
@@ -90,11 +91,39 @@ public class TransformService extends AbstractService implements ITransformServi
             "if (filter != null) return filter.%s(currentValue); else return currentValue;"
             + "} else { return currentValue; }"
             + "}";
+    public static final Map<String, IColumnTransform<?>> columnTransformMap = new HashMap<String, IColumnTransform<?>>();
     private IConfigurationService configurationService;
     private IExtensionService extensionService;
     private IParameterService parameterService;
     private Date lastUpdateTime;
     private ICacheManager cacheManager;
+    static {
+        columnTransformMap.put(ParameterColumnTransform.NAME, new ParameterColumnTransform());
+        columnTransformMap.put(VariableColumnTransform.NAME, new VariableColumnTransform());
+        columnTransformMap.put(LookupColumnTransform.NAME, new LookupColumnTransform());
+        columnTransformMap.put(BshColumnTransform.NAME, new BshColumnTransform());
+        columnTransformMap.put(AdditiveColumnTransform.NAME, new AdditiveColumnTransform());
+        columnTransformMap.put(JavaColumnTransform.NAME, new JavaColumnTransform());
+        columnTransformMap.put(ConstantColumnTransform.NAME, new ConstantColumnTransform());
+        columnTransformMap.put(CopyColumnTransform.NAME, new CopyColumnTransform());
+        columnTransformMap.put(IdentityColumnTransform.NAME, new IdentityColumnTransform());
+        columnTransformMap.put(MultiplierColumnTransform.NAME, new MultiplierColumnTransform());
+        columnTransformMap.put(SubstrColumnTransform.NAME, new SubstrColumnTransform());
+        columnTransformMap.put(LeftColumnTransform.NAME, new LeftColumnTransform());
+        columnTransformMap.put(TrimColumnTransform.NAME, new TrimColumnTransform());
+        columnTransformMap.put(BinaryLeftColumnTransform.NAME, new BinaryLeftColumnTransform());
+        columnTransformMap.put(RemoveColumnTransform.NAME, new RemoveColumnTransform());
+        columnTransformMap.put(MathColumnTransform.NAME, new MathColumnTransform());
+        columnTransformMap.put(ValueMapColumnTransform.NAME, new ValueMapColumnTransform());
+        columnTransformMap.put(CopyIfChangedColumnTransform.NAME, new CopyIfChangedColumnTransform());
+        columnTransformMap.put(ColumnsToRowsKeyColumnTransform.NAME, new ColumnsToRowsKeyColumnTransform());
+        columnTransformMap.put(ColumnsToRowsValueColumnTransform.NAME, new ColumnsToRowsValueColumnTransform());
+        columnTransformMap.put(ClarionDateTimeColumnTransform.NAME, new ClarionDateTimeColumnTransform());
+        columnTransformMap.put(IsEmptyTransform.NAME, new IsEmptyTransform());
+        columnTransformMap.put(IsNullTransform.NAME, new IsNullTransform());
+        columnTransformMap.put(IsBlankTransform.NAME, new IsBlankTransform());
+        columnTransformMap.put(DeletedColumnListColumnTransform.NAME, new DeletedColumnListColumnTransform());
+    }
 
     public TransformService(ISymmetricEngine engine, ISymmetricDialect symmetricDialect) {
         super(engine.getParameterService(), symmetricDialect);
@@ -102,31 +131,17 @@ public class TransformService extends AbstractService implements ITransformServi
         this.configurationService = engine.getConfigurationService();
         this.extensionService = engine.getExtensionService();
         this.parameterService = engine.getParameterService();
-        addColumnTransform(ParameterColumnTransform.NAME, new ParameterColumnTransform(parameterService));
-        addColumnTransform(VariableColumnTransform.NAME, new VariableColumnTransform());
-        addColumnTransform(LookupColumnTransform.NAME, new LookupColumnTransform());
-        addColumnTransform(BshColumnTransform.NAME, new BshColumnTransform(parameterService));
-        addColumnTransform(AdditiveColumnTransform.NAME, new AdditiveColumnTransform());
-        addColumnTransform(JavaColumnTransform.NAME, new JavaColumnTransform(extensionService));
-        addColumnTransform(ConstantColumnTransform.NAME, new ConstantColumnTransform());
-        addColumnTransform(CopyColumnTransform.NAME, new CopyColumnTransform());
-        addColumnTransform(IdentityColumnTransform.NAME, new IdentityColumnTransform());
-        addColumnTransform(MultiplierColumnTransform.NAME, new MultiplierColumnTransform());
-        addColumnTransform(SubstrColumnTransform.NAME, new SubstrColumnTransform());
-        addColumnTransform(LeftColumnTransform.NAME, new LeftColumnTransform());
-        addColumnTransform(TrimColumnTransform.NAME, new TrimColumnTransform());
-        addColumnTransform(BinaryLeftColumnTransform.NAME, new BinaryLeftColumnTransform());
-        addColumnTransform(RemoveColumnTransform.NAME, new RemoveColumnTransform());
-        addColumnTransform(MathColumnTransform.NAME, new MathColumnTransform());
-        addColumnTransform(ValueMapColumnTransform.NAME, new ValueMapColumnTransform());
-        addColumnTransform(CopyIfChangedColumnTransform.NAME, new CopyIfChangedColumnTransform());
-        addColumnTransform(ColumnsToRowsKeyColumnTransform.NAME, new ColumnsToRowsKeyColumnTransform());
-        addColumnTransform(ColumnsToRowsValueColumnTransform.NAME, new ColumnsToRowsValueColumnTransform());
-        addColumnTransform(ClarionDateTimeColumnTransform.NAME, new ClarionDateTimeColumnTransform());
-        addColumnTransform(IsEmptyTransform.NAME, new IsEmptyTransform());
-        addColumnTransform(IsNullTransform.NAME, new IsNullTransform());
-        addColumnTransform(IsBlankTransform.NAME, new IsBlankTransform());
-        addColumnTransform(DeletedColumnListColumnTransform.NAME, new DeletedColumnListColumnTransform());
+        for (Entry<String, IColumnTransform<?>> columnTransformEntry : columnTransformMap.entrySet()) {
+            IColumnTransform<?> columnTransform = columnTransformEntry.getValue();
+            if (columnTransform instanceof ParameterColumnTransform parameterColumnTransform) {
+                parameterColumnTransform.setParameterService(parameterService);
+            } else if (columnTransform instanceof BshColumnTransform bshColumnTransform) {
+                bshColumnTransform.setParameterService(parameterService);
+            } else if (columnTransform instanceof JavaColumnTransform javaColumnTransform) {
+                javaColumnTransform.setExtensionService(extensionService);
+            }
+            addColumnTransform(columnTransformEntry.getKey(), columnTransform);
+        }
         setSqlMap(new TransformServiceSqlMap(symmetricDialect.getPlatform(),
                 createSqlReplacementTokens()));
     }

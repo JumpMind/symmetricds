@@ -47,7 +47,7 @@ public class JavaColumnTransform implements ISingleValueColumnTransform, IBuiltI
     public JavaColumnTransform() {
     }
 
-    public JavaColumnTransform(IExtensionService extensionService) {
+    public void setExtensionService(IExtensionService extensionService) {
         this.extensionService = extensionService;
     }
 

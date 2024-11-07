@@ -60,7 +60,10 @@ public class BshColumnTransform implements ISingleNewAndOldValueColumnTransform,
      */
     private static Map<String, Object> bshContext = new HashMap<String, Object>();
 
-    public BshColumnTransform(IParameterService parameterService) {
+    public BshColumnTransform() {
+    }
+
+    public void setParameterService(IParameterService parameterService) {
         this.parameterService = parameterService;
     }
 

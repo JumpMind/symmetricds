@@ -79,7 +79,8 @@ public class JavaColumnTransformTest {
         Map<String, String> oldSourceValues = new HashMap<String, String>();
         oldSourceValues.put("sColumn", "anOldValue");
         TransformedData data = new TransformedData(table, DataEventType.INSERT, sourceKeyValues, oldSourceValues, sourceValues);
-        JavaColumnTransform transform = new JavaColumnTransform(extensionService);
+        JavaColumnTransform transform = new JavaColumnTransform();
+        transform.setExtensionService(extensionService);
         String out = transform.transform(platform, context, column, data, sourceValues, "aNewValue", "anOldValue");
         assertEquals("transValue", out);
     }
@@ -103,7 +104,8 @@ public class JavaColumnTransformTest {
         Map<String, String> oldSourceValues = new HashMap<String, String>();
         oldSourceValues.put("sColumn", "anOldValue");
         TransformedData data = new TransformedData(table, DataEventType.INSERT, sourceKeyValues, oldSourceValues, sourceValues);
-        JavaColumnTransform transform = new JavaColumnTransform(extensionService);
+        JavaColumnTransform transform = new JavaColumnTransform();
+        transform.setExtensionService(extensionService);
         String out = transform.transform(platform, context, column, data, sourceValues, "aNewValue", "anOldValue");
         assertEquals("transValue", out);
     }

@@ -31,7 +31,10 @@ public class ParameterColumnTransform implements ISingleNewAndOldValueColumnTran
     public static final String NAME = "parameter";
     IParameterService parameterService;
 
-    public ParameterColumnTransform(IParameterService parameterService) {
+    public ParameterColumnTransform() {
+    }
+
+    public void setParameterService(IParameterService parameterService) {
         this.parameterService = parameterService;
     }
 
