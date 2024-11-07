@@ -130,6 +130,14 @@ public class PurgeService extends AbstractService implements IPurgeService {
             try {
                 log.info("The outgoing purge process is about to run for data older than {}",
                         fastFormat.format(retentionCutoff.getTime()));
+                List<IPurgeListener> purgeListeners = extensionService.getExtensionPointList(IPurgeListener.class);
+                for (IPurgeListener purgeListener : purgeListeners) {
+                    try {
+                        rowsPurged += purgeListener.beforePurgeOutgoing(force);
+                    } catch (Throwable e) {
+                        log.error(e.getMessage(), e);
+                    }
+                }
                 // VoltDB doesn't support capture, or subselects. So we'll just be purging heartbeats
                 // by date here.
                 if (getSymmetricDialect().getName().equalsIgnoreCase(DatabaseNamesConstants.VOLTDB)) {
@@ -145,9 +153,12 @@ public class PurgeService extends AbstractService implements IPurgeService {
                     rowsPurged += purgeExtractRequests();
                     rowsPurged += purgeStrandedChannels();
                 }
-                List<IPurgeListener> purgeListeners = extensionService.getExtensionPointList(IPurgeListener.class);
                 for (IPurgeListener purgeListener : purgeListeners) {
-                    rowsPurged += purgeListener.purgeOutgoing(force);
+                    try {
+                        rowsPurged += purgeListener.purgeOutgoing(force);
+                    } catch (Throwable e) {
+                        log.error(e.getMessage(), e);
+                    }
                 }
             } finally {
                 if (!force) {
@@ -744,13 +755,24 @@ public class PurgeService extends AbstractService implements IPurgeService {
             if (force || clusterService.lock(ClusterConstants.PURGE_INCOMING)) {
                 try {
                     log.info("The incoming purge process is about to run");
+                    List<IPurgeListener> purgeListeners = extensionService.getExtensionPointList(IPurgeListener.class);
+                    for (IPurgeListener purgeListener : purgeListeners) {
+                        try {
+                            purgedRowCount += purgeListener.beforePurgeIncoming(force);
+                        } catch (Throwable e) {
+                            log.error(e.getMessage(), e);
+                        }
+                    }
                     purgedRowCount = purgeIncomingBatch(retentionCutoff);
                     purgedRowCount += purgeIncomingError();
                     purgedRowCount += purgeRegistrationRequests();
                     purgedRowCount += purgeTriggerHist();
-                    List<IPurgeListener> purgeListeners = extensionService.getExtensionPointList(IPurgeListener.class);
                     for (IPurgeListener purgeListener : purgeListeners) {
-                        purgedRowCount += purgeListener.purgeIncoming(force);
+                        try {
+                            purgedRowCount += purgeListener.purgeIncoming(force);
+                        } catch (Throwable e) {
+                            log.error(e.getMessage(), e);
+                        }
                     }
                     statisticManager.addJobStats(ClusterConstants.PURGE_INCOMING, startTime, System.currentTimeMillis(), purgedRowCount);
                 } finally {

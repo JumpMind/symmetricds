@@ -28,6 +28,7 @@ public class NodeGroupLink implements IModelObject, Comparable<NodeGroupLink> {
     private String targetNodeGroupId;
     private NodeGroupLinkAction dataEventAction = NodeGroupLinkAction.W;
     private boolean syncConfigEnabled = true;
+    private boolean syncSqlEnabled = true;
     private boolean isReversible;
     private Date createTime;
     private Date lastUpdateTime;
@@ -62,6 +63,14 @@ public class NodeGroupLink implements IModelObject, Comparable<NodeGroupLink> {
         return syncConfigEnabled;
     }
 
+    public void setSyncSqlEnabled(boolean syncSqlEnabled) {
+        this.syncSqlEnabled = syncSqlEnabled;
+    }
+
+    public boolean isSyncSqlEnabled() {
+        return syncSqlEnabled;
+    }
+
     public String getSourceNodeGroupId() {
         return sourceNodeGroupId;
     }
@@ -86,26 +95,32 @@ public class NodeGroupLink implements IModelObject, Comparable<NodeGroupLink> {
         this.isReversible = isReversible;
     }
 
+    @Override
     public Date getCreateTime() {
         return createTime;
     }
 
+    @Override
     public void setCreateTime(Date createTime) {
         this.createTime = createTime;
     }
 
+    @Override
     public String getLastUpdateBy() {
         return lastUpdateBy;
     }
 
+    @Override
     public void setLastUpdateBy(String lastUpdateBy) {
         this.lastUpdateBy = lastUpdateBy;
     }
 
+    @Override
     public void setLastUpdateTime(Date lastUpdateTime) {
         this.lastUpdateTime = lastUpdateTime;
     }
 
+    @Override
     public Date getLastUpdateTime() {
         return lastUpdateTime;
     }
@@ -131,23 +146,30 @@ public class NodeGroupLink implements IModelObject, Comparable<NodeGroupLink> {
 
     @Override
     public boolean equals(Object obj) {
-        if (this == obj)
+        if (this == obj) {
             return true;
-        if (obj == null)
+        }
+        if (obj == null) {
             return false;
-        if (getClass() != obj.getClass())
+        }
+        if (getClass() != obj.getClass()) {
             return false;
+        }
         NodeGroupLink other = (NodeGroupLink) obj;
         if (sourceNodeGroupId == null) {
-            if (other.sourceNodeGroupId != null)
+            if (other.sourceNodeGroupId != null) {
                 return false;
-        } else if (!sourceNodeGroupId.equals(other.sourceNodeGroupId))
+            }
+        } else if (!sourceNodeGroupId.equals(other.sourceNodeGroupId)) {
             return false;
+        }
         if (targetNodeGroupId == null) {
-            if (other.targetNodeGroupId != null)
+            if (other.targetNodeGroupId != null) {
                 return false;
-        } else if (!targetNodeGroupId.equals(other.targetNodeGroupId))
+            }
+        } else if (!targetNodeGroupId.equals(other.targetNodeGroupId)) {
             return false;
+        }
         return true;
     }
 }

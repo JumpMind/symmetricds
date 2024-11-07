@@ -79,7 +79,6 @@ public class H2DdlBuilder extends AbstractDdlBuilder {
         databaseInfo.setNonPKIdentityColumnsSupported(false);
         databaseInfo.setIdentityOverrideAllowed(false);
         databaseInfo.setSystemForeignKeyIndicesAlwaysNonUnique(true);
-        databaseInfo.setNullAsDefaultValueRequired(false);
         databaseInfo.addNativeTypeMapping(Types.ARRAY, "BINARY", Types.BINARY);
         databaseInfo.addNativeTypeMapping(Types.DISTINCT, "BINARY", Types.BINARY);
         databaseInfo.addNativeTypeMapping(Types.NULL, "BINARY", Types.BINARY);

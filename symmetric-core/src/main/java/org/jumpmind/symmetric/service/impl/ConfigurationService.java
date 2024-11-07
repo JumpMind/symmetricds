@@ -30,6 +30,7 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.jumpmind.db.model.Table;
 import org.jumpmind.db.sql.ISqlRowMapper;
 import org.jumpmind.db.sql.ISqlTransaction;
 import org.jumpmind.db.sql.Row;
@@ -38,6 +39,7 @@ import org.jumpmind.symmetric.ISymmetricEngine;
 import org.jumpmind.symmetric.cache.ICacheManager;
 import org.jumpmind.symmetric.common.Constants;
 import org.jumpmind.symmetric.common.ParameterConstants;
+import org.jumpmind.symmetric.common.TableConstants;
 import org.jumpmind.symmetric.db.ISymmetricDialect;
 import org.jumpmind.symmetric.model.Channel;
 import org.jumpmind.symmetric.model.ChannelMap;
@@ -159,6 +161,7 @@ public class ConfigurationService extends AbstractService implements IConfigurat
                         || parameterService.is(ParameterConstants.CLUSTER_STAGING_ENABLED));
     }
 
+    @Override
     public boolean refreshFromDatabase() {
         Date date1 = sqlTemplate.queryForObject(getSql("selectMaxChannelLastUpdateTime"),
                 Date.class);
@@ -180,6 +183,7 @@ public class ConfigurationService extends AbstractService implements IConfigurat
         return false;
     }
 
+    @Override
     public void saveNodeGroupLink(NodeGroupLink link) {
         if (!doesNodeGroupExist(link.getSourceNodeGroupId())) {
             saveNodeGroup(new NodeGroup(link.getSourceNodeGroupId()));
@@ -189,19 +193,20 @@ public class ConfigurationService extends AbstractService implements IConfigurat
         }
         link.setLastUpdateTime(new Date());
         if (sqlTemplate.update(getSql("updateNodeGroupLinkSql"), link.getDataEventAction().name(),
-                link.isSyncConfigEnabled() ? 1 : 0, link.isReversible() ? 1 : 0,
+                link.isSyncConfigEnabled() ? 1 : 0, link.isSyncSqlEnabled() ? 1 : 0, link.isReversible() ? 1 : 0,
                 link.getLastUpdateTime(),
                 link.getLastUpdateBy(), link.getSourceNodeGroupId(), link.getTargetNodeGroupId()) <= 0) {
             link.setCreateTime(new Date());
             sqlTemplate.update(getSql("insertNodeGroupLinkSql"), link.getDataEventAction().name(),
                     link.getSourceNodeGroupId(), link.getTargetNodeGroupId(),
-                    link.isSyncConfigEnabled() ? 1 : 0, link.isReversible() ? 1 : 0,
+                    link.isSyncConfigEnabled() ? 1 : 0, link.isSyncSqlEnabled() ? 1 : 0, link.isReversible() ? 1 : 0,
                     link.getLastUpdateTime(),
                     link.getLastUpdateBy(), link.getCreateTime());
         }
         clearCache();
     }
 
+    @Override
     public void renameNodeGroupLink(String oldSourceId, String oldTargetId, NodeGroupLink link) {
         saveNodeGroupLink(link);
         ISqlTransaction transaction = null;
@@ -252,6 +257,7 @@ public class ConfigurationService extends AbstractService implements IConfigurat
         return exists;
     }
 
+    @Override
     public void saveNodeGroup(NodeGroup group) {
         group.setLastUpdateTime(new Date());
         if (sqlTemplate.update(getSql("updateNodeGroupSql"), group.getDescription(),
@@ -263,10 +269,12 @@ public class ConfigurationService extends AbstractService implements IConfigurat
         }
     }
 
+    @Override
     public void deleteNodeGroup(String nodeGroupId) {
         sqlTemplate.update(getSql("deleteNodeGroupSql"), nodeGroupId);
     }
 
+    @Override
     public void deleteNodeGroupLink(NodeGroupLink link) {
         deleteNodeGroupLink(link.getSourceNodeGroupId(), link.getTargetNodeGroupId());
     }
@@ -275,10 +283,12 @@ public class ConfigurationService extends AbstractService implements IConfigurat
         sqlTemplate.update(getSql("deleteNodeGroupLinkSql"), sourceId, targetId);
     }
 
+    @Override
     public void deleteAllNodeGroupLinks() {
         sqlTemplate.update(getSql("deleteAllNodeGroupLinksSql"));
     }
 
+    @Override
     public List<NodeGroup> getNodeGroups() {
         return sqlTemplate.query(getSql("selectNodeGroupsSql"), new NodeGroupMapper());
     }
@@ -293,9 +303,15 @@ public class ConfigurationService extends AbstractService implements IConfigurat
 
     @Override
     public List<NodeGroupLink> getNodeGroupLinksFromDb() {
-        return sqlTemplate.query(getSql("groupsLinksSql"), new NodeGroupLinkMapper());
+        String sql = getSql("groupsLinksCompatibleSql");
+        Table table = platform.getTableFromCache(TableConstants.getTableName(parameterService.getTablePrefix(), TableConstants.SYM_NODE_GROUP_LINK), false);
+        if (table != null && table.findColumn("sync_sql_enabled") != null) {
+            sql = getSql("groupsLinksSql");
+        }
+        return sqlTemplate.query(sql, new NodeGroupLinkMapper());
     }
 
+    @Override
     public List<NodeGroupLink> getNodeGroupLinksFor(String sourceNodeGroupId, boolean refreshCache) {
         List<NodeGroupLink> links = getNodeGroupLinks(refreshCache);
         List<NodeGroupLink> target = new ArrayList<NodeGroupLink>(links.size());
@@ -307,6 +323,7 @@ public class ConfigurationService extends AbstractService implements IConfigurat
         return target;
     }
 
+    @Override
     public NodeGroupLink getNodeGroupLinkFor(String sourceNodeGroupId, String targetNodeGroupId,
             boolean refreshCache) {
         List<NodeGroupLink> links = getNodeGroupLinks(refreshCache);
@@ -319,10 +336,12 @@ public class ConfigurationService extends AbstractService implements IConfigurat
         return null;
     }
 
+    @Override
     public boolean isChannelInUse(String channelId) {
         return sqlTemplate.queryForInt(getSql("isChannelInUseSql"), channelId) > 0;
     }
 
+    @Override
     public void saveChannel(Channel channel, boolean reloadChannels) {
         channel.setLastUpdateTime(new Date());
         if (0 >= sqlTemplate.update(
@@ -359,10 +378,12 @@ public class ConfigurationService extends AbstractService implements IConfigurat
         }
     }
 
+    @Override
     public void saveChannel(NodeChannel nodeChannel, boolean reloadChannels) {
         saveChannel(nodeChannel.getChannel(), reloadChannels);
     }
 
+    @Override
     public void saveChannelAsCopy(Channel channel, boolean reloadChannels) {
         String newId = channel.getChannelId();
         List<Channel> channels = sqlTemplate.query(getSql("selectChannelsSql", "whereChannelIdLikeSql"), new ChannelMapper(),
@@ -376,6 +397,7 @@ public class ConfigurationService extends AbstractService implements IConfigurat
         saveChannel(channel, reloadChannels);
     }
 
+    @Override
     public void renameChannel(String oldId, Channel channel) {
         saveChannel(channel, true);
         ISqlTransaction transaction = null;
@@ -398,11 +420,13 @@ public class ConfigurationService extends AbstractService implements IConfigurat
         deleteChannel(oldId);
     }
 
+    @Override
     public void saveNodeChannel(NodeChannel nodeChannel, boolean reloadChannels) {
         saveChannel(nodeChannel.getChannel(), false);
         saveNodeChannelControl(nodeChannel, reloadChannels);
     }
 
+    @Override
     public void saveNodeChannelControl(NodeChannel nodeChannel, boolean reloadChannels) {
         if (0 >= sqlTemplate.update(
                 getSql("updateNodeChannelControlSql"),
@@ -421,6 +445,7 @@ public class ConfigurationService extends AbstractService implements IConfigurat
         }
     }
 
+    @Override
     public void deleteChannel(Channel channel) {
         deleteChannel(channel.getChannelId());
     }
@@ -431,15 +456,18 @@ public class ConfigurationService extends AbstractService implements IConfigurat
         clearCache();
     }
 
+    @Override
     public void deleteAllChannels() {
         sqlTemplate.update(getSql("deleteAllChannelsSql"));
         clearCache();
     }
 
+    @Override
     public NodeChannel getNodeChannel(String channelId, boolean refreshExtractMillis) {
         return getNodeChannel(channelId, nodeService.findIdentityNodeId(), refreshExtractMillis);
     }
 
+    @Override
     public NodeChannel getNodeChannel(String channelId, String nodeId, boolean refreshExtractMillis) {
         List<NodeChannel> channels = getNodeChannels(nodeId, refreshExtractMillis);
         for (NodeChannel nodeChannel : channels) {
@@ -450,10 +478,12 @@ public class ConfigurationService extends AbstractService implements IConfigurat
         return null;
     }
 
+    @Override
     public List<NodeChannel> getNodeChannels(boolean refreshExtractMillis) {
         return getNodeChannels(nodeService.findIdentityNodeId(), refreshExtractMillis);
     }
 
+    @Override
     public List<NodeChannel> getNodeChannels(final String nodeId, boolean refreshExtractMillis) {
         boolean loaded = false;
         List<NodeChannel> nodeChannels;
@@ -480,6 +510,7 @@ public class ConfigurationService extends AbstractService implements IConfigurat
             if (usingExtractPeriod) {
                 sqlTemplate.query(getSql("selectNodeChannelControlSql"),
                         new ISqlRowMapper<Object>() {
+                            @Override
                             public Object mapRow(Row row) {
                                 String channelId = row.getString("channel_id");
                                 Date extractTime = row.getDateTime("last_extract_time");
@@ -500,6 +531,7 @@ public class ConfigurationService extends AbstractService implements IConfigurat
         List<NodeChannel> nodeChannels = sqlTemplate.query(getSql("selectNodeChannelsSql"), new NodeChannelMapper(nodeId));
         List<NodeChannel> nodeChannelControls = sqlTemplate.query(getSql("selectNodeChannelControlSql"),
                 new ISqlRowMapper<NodeChannel>() {
+                    @Override
                     public NodeChannel mapRow(Row row) {
                         NodeChannel nodeChannel = new NodeChannel();
                         nodeChannel.setChannelId(row.getString("channel_id"));
@@ -521,6 +553,7 @@ public class ConfigurationService extends AbstractService implements IConfigurat
         return nodeChannels;
     }
 
+    @Override
     public void clearCache() {
         cacheManager.flushNodeChannels();
         cacheManager.flushChannels();
@@ -528,9 +561,10 @@ public class ConfigurationService extends AbstractService implements IConfigurat
         cacheManager.flushNodeGroupChannelWindows();
     }
 
+    @Override
     public NodeGroupLinkAction getDataEventActionByGroupLinkId(String sourceGroupId,
             String targetGroupId) {
-        String code = (String) sqlTemplate.queryForObject(getSql("selectDataEventActionsByIdSql"),
+        String code = sqlTemplate.queryForObject(getSql("selectDataEventActionsByIdSql"),
                 String.class, sourceGroupId, targetGroupId);
         return NodeGroupLinkAction.fromCode(code);
     }
@@ -587,6 +621,7 @@ public class ConfigurationService extends AbstractService implements IConfigurat
         return channelWindowsByChannel;
     }
 
+    @Override
     public ChannelMap getSuspendIgnoreChannelLists(final String nodeId) {
         ChannelMap map = new ChannelMap();
         List<NodeChannel> ncs = getNodeChannels(nodeId, true);
@@ -603,6 +638,7 @@ public class ConfigurationService extends AbstractService implements IConfigurat
         return map;
     }
 
+    @Override
     public List<Channel> getFileSyncChannels() {
         List<Channel> list = new ArrayList<Channel>(getChannels(false).values());
         Iterator<Channel> it = list.iterator();
@@ -630,6 +666,7 @@ public class ConfigurationService extends AbstractService implements IConfigurat
         return channels;
     }
 
+    @Override
     public Channel getChannel(String channelId) {
         NodeChannel nodeChannel = getNodeChannel(channelId, false);
         if (nodeChannel != null) {
@@ -639,10 +676,12 @@ public class ConfigurationService extends AbstractService implements IConfigurat
         }
     }
 
+    @Override
     public ChannelMap getSuspendIgnoreChannelLists() {
         return getSuspendIgnoreChannelLists(nodeService.findIdentityNodeId());
     }
 
+    @Override
     public Map<String, String> getRegistrationRedirectMap() {
         return this.sqlTemplate.queryForMap(getSql("getRegistrationRedirectSql"),
                 "registrant_external_id", "registration_node_id");
@@ -654,6 +693,7 @@ public class ConfigurationService extends AbstractService implements IConfigurat
     }
 
     static class NodeGroupChannelWindowMapper implements ISqlRowMapper<NodeGroupChannelWindow> {
+        @Override
         public NodeGroupChannelWindow mapRow(Row row) {
             NodeGroupChannelWindow window = new NodeGroupChannelWindow();
             window.setNodeGroupId(row.getString("node_group_id"));
@@ -666,12 +706,16 @@ public class ConfigurationService extends AbstractService implements IConfigurat
     }
 
     static class NodeGroupLinkMapper implements ISqlRowMapper<NodeGroupLink> {
+        @Override
         public NodeGroupLink mapRow(Row row) {
             NodeGroupLink link = new NodeGroupLink();
             link.setSourceNodeGroupId(row.getString("source_node_group_id"));
             link.setTargetNodeGroupId(row.getString("target_node_group_id"));
             link.setDataEventAction(NodeGroupLinkAction.fromCode(row.getString("data_event_action")));
             link.setSyncConfigEnabled(row.getBoolean("sync_config_enabled"));
+            if (row.containsKey("sync_sql_enabled")) {
+                link.setSyncSqlEnabled(row.getBoolean("sync_sql_enabled"));
+            }
             link.setReversible(row.getBoolean("is_reversible"));
             link.setCreateTime(row.getDateTime("create_time"));
             link.setLastUpdateBy(row.getString("last_update_by"));
@@ -681,6 +725,7 @@ public class ConfigurationService extends AbstractService implements IConfigurat
     }
 
     static class NodeGroupMapper implements ISqlRowMapper<NodeGroup> {
+        @Override
         public NodeGroup mapRow(Row row) {
             NodeGroup group = new NodeGroup();
             group.setNodeGroupId(row.getString("node_group_id"));
@@ -699,6 +744,7 @@ public class ConfigurationService extends AbstractService implements IConfigurat
             this.nodeId = nodeId;
         }
 
+        @Override
         public NodeChannel mapRow(Row row) {
             NodeChannel nodeChannel = new NodeChannel();
             nodeChannel.setChannelId(row.getString("channel_id"));
@@ -728,6 +774,7 @@ public class ConfigurationService extends AbstractService implements IConfigurat
     }
 
     static class ChannelMapper implements ISqlRowMapper<Channel> {
+        @Override
         public Channel mapRow(Row row) {
             Channel channel = new Channel();
             channel.setChannelId(row.getString("channel_id"));

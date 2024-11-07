@@ -31,17 +31,18 @@ import org.jumpmind.db.io.DatabaseXmlUtil;
 import org.jumpmind.db.model.Column;
 import org.jumpmind.db.model.PlatformColumn;
 import org.jumpmind.db.model.Table;
+import org.jumpmind.db.platform.DatabaseInfo;
 import org.jumpmind.db.platform.IDatabasePlatform;
 import org.jumpmind.db.sql.ISqlTemplate;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 abstract public class AbstractDdlTypesTest {
     protected final Logger log = LoggerFactory.getLogger(getClass());
-    private static IDatabasePlatform platform;
+    protected static IDatabasePlatform platform;
     protected Level originalLevel;
 
     @BeforeAll
@@ -95,7 +96,9 @@ abstract public class AbstractDdlTypesTest {
 
     protected void createTable() {
         ISqlTemplate sqlTemplate = platform.getSqlTemplate();
-        sqlTemplate.update(buildDdl());
+        String sql = buildDdl();
+        log.info("Original SQL to create table: \n{}", sql);
+        sqlTemplate.update(sql);
     }
 
     protected void dropTable() {
@@ -113,11 +116,16 @@ abstract public class AbstractDdlTypesTest {
         StringBuilder ddl = new StringBuilder();
         String[] colTypes = getDdlTypes();
         ddl.append("CREATE TABLE ").append(tableName()).append(" (");
+        DatabaseInfo info = platform.getDatabaseInfo();
         for (int i = 0; i < colTypes.length; i++) {
             ddl.append(platform.alterCaseToMatchDatabaseDefaultCase("col")).append(i).append(" ")
-                    .append(colTypes[i]).append(",");
+                    .append(colTypes[i]).append(info.isNullAsDefaultValueRequired() && hasNullDefault(colTypes[i]) ? " NULL,\n" : ",\n");
         }
-        ddl.replace(ddl.length() - 1, ddl.length(), ")");
+        ddl.replace(ddl.length() - 2, ddl.length(), ")");
         return ddl.toString();
+    }
+
+    protected boolean hasNullDefault(String columnType) {
+        return true;
     }
 }

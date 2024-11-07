@@ -18,22 +18,27 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.jumpmind.db.platform.h2;
+package org.jumpmind.db.platform.mysql;
 
 import org.jumpmind.db.AbstractDdlTypesTest;
 import org.jumpmind.db.platform.DatabaseNamesConstants;
 
-public class H2DdlTypesTest extends AbstractDdlTypesTest {
+public class MySqlDdlTypesTest extends AbstractDdlTypesTest {
     @Override
     protected String getName() {
-        return DatabaseNamesConstants.H2;
+        return DatabaseNamesConstants.MYSQL;
     }
 
     @Override
     protected String[] getDdlTypes() {
-        return new String[] { "VARCHAR(55)", "UUID", "VARCHAR_IGNORECASE(100)", "VARCHAR ARRAY",
-                "char(10)", "binary(10)", "varbinary(10)", "blob",
-                "boolean", "tinyint", "smallint", "integer", "bigint", "numeric", "real", "double precision", "decfloat",
-                "date", "time", "timestamp" };
+        return new String[] {
+                "integer", "smallint", "decimal", "numeric",
+                "float", "real", "double precision",
+                "date", "time", "datetime", "timestamp", // "year",
+                "char", "varchar(100)", "text", "enum('small','medium','large')", // "set('a','b','c')",
+                "tinytext", "mediumtext",
+                "binary", "varbinary(100)", "blob", "tinyblob", "mediumblob",
+                "json"
+        };
     }
 }

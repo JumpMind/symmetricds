@@ -18,22 +18,12 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.jumpmind.db.platform.h2;
+package org.jumpmind.vaadin.ui.sqlexplorer;
 
-import org.jumpmind.db.AbstractDdlTypesTest;
-import org.jumpmind.db.platform.DatabaseNamesConstants;
+public class AbortedQueryException extends RuntimeException {
+    private static final long serialVersionUID = 1L;
 
-public class H2DdlTypesTest extends AbstractDdlTypesTest {
-    @Override
-    protected String getName() {
-        return DatabaseNamesConstants.H2;
-    }
-
-    @Override
-    protected String[] getDdlTypes() {
-        return new String[] { "VARCHAR(55)", "UUID", "VARCHAR_IGNORECASE(100)", "VARCHAR ARRAY",
-                "char(10)", "binary(10)", "varbinary(10)", "blob",
-                "boolean", "tinyint", "smallint", "integer", "bigint", "numeric", "real", "double precision", "decfloat",
-                "date", "time", "timestamp" };
+    public AbortedQueryException(String message) {
+        super(message);
     }
 }

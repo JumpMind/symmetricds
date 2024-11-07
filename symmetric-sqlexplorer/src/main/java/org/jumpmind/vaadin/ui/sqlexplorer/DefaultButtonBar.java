@@ -107,6 +107,7 @@ public class DefaultButtonBar implements IButtonBar, Serializable {
         importLayout.add(importIcon, new Span("DB Import"));
         importLayout.setVerticalComponentAlignment(Alignment.END, importIcon);
         importButton = optionsSubMenu.addItem(importLayout, event -> new DbImportDialog(db.getPlatform()).showAtSize(0.6));
+        importButton.setEnabled(settingsProvider.get().isAllowImport());
         HorizontalLayout exportLayout = new HorizontalLayout();
         Icon exportIcon = new Icon(VaadinIcon.UPLOAD);
         exportIcon.setSize("16px");
@@ -116,6 +117,7 @@ public class DefaultButtonBar implements IButtonBar, Serializable {
             String excludeTablesRegex = settingsProvider.get().getProperties().get(Settings.SQL_EXPLORER_EXCLUDE_TABLES_REGEX);
             new DbExportDialog(db.getPlatform(), queryPanel, excludeTablesRegex).showAtSize(0.6);
         });
+        exportButton.setEnabled(settingsProvider.get().isAllowExport());
         HorizontalLayout fillLayout = new HorizontalLayout();
         Icon fillIcon = new Icon(VaadinIcon.FILL);
         fillIcon.setSize("16px");
@@ -125,13 +127,17 @@ public class DefaultButtonBar implements IButtonBar, Serializable {
             String excludeTablesRegex = settingsProvider.get().getProperties().get(Settings.SQL_EXPLORER_EXCLUDE_TABLES_REGEX);
             new DbFillDialog(db.getPlatform(), queryPanel, excludeTablesRegex).showAtSize(0.6);
         });
+        fillButton.setEnabled(settingsProvider.get().isAllowFill());
         for (IDbMenuItem item : additionalMenuItems) {
             HorizontalLayout layout = new HorizontalLayout();
             Icon icon = item.getIcon();
             icon.setSize("16px");
             layout.add(icon, new Span(item.getCaption()));
             layout.setVerticalComponentAlignment(Alignment.END, icon);
-            optionsSubMenu.addItem(layout, item.getListener());
+            MenuItem button = optionsSubMenu.addItem(layout, item.getListener());
+            if (item.getListener() == null) {
+                button.setEnabled(false);
+            }
         }
     }
 }

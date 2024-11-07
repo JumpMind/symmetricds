@@ -77,6 +77,8 @@ public class DefaultDatabaseWriter extends AbstractDatabaseWriter {
     private final String ATTRIBUTE_CHANNEL_ID_RELOAD = "reload";
     private final String TRUNCATE_PATTERN = "^(truncate)( table)?.*";
     private final String DELETE_PATTERN = "^(delete from).*";
+    private final String INSERT_PATTERN = "^(insert into).*";
+    private final String UPDATE_PATTERN = "^(update ).*";
     private final String ALTER_DEF_CONSTRAINT_PATTERN = " *alter +table +[\\[\\\"]{0,1}(.*?)[\\]\\\"]{0,1} +drop +constraint +[\\[\\\"]{0,1}(df__.*?)[\\]\\\"]{0,1} *";
     private final String ALTER_TABLE_PATTERN = " *(alter|create) +.*";
     protected IDatabasePlatform platform;
@@ -240,6 +242,20 @@ public class DefaultDatabaseWriter extends AbstractDatabaseWriter {
         if (isCteExpression()) {
             currentDmlStatement.updateCteExpression(batch.getSourceNodeId());
         }
+    }
+
+    protected String replaceCteExpression(String sql) {
+        String retSql = sql;
+        if (isCteExpression()) {
+            retSql = getPlatform().getDdlBuilder().getDatabaseInfo().getCteExpression()
+                    + " " + sql;
+            retSql = currentDmlStatement.updateCteExpression(retSql, batch.getSourceNodeId());
+        }
+        return retSql;
+    }
+
+    protected boolean isDml(String sql) {
+        return sql.matches(INSERT_PATTERN) || sql.matches(UPDATE_PATTERN) || sql.matches(DELETE_PATTERN);
     }
 
     @Override
@@ -735,6 +751,9 @@ public class DefaultDatabaseWriter extends AbstractDatabaseWriter {
                     } else {
                         if (sql.matches(TRUNCATE_PATTERN) && getPlatform().getName().equals(DatabaseNamesConstants.DB2)) {
                             commit(true);
+                        }
+                        if (isDml(sql)) {
+                            sql = replaceCteExpression(sql);
                         }
                         prepare(sql, data);
                         log.info("Running SQL event: {}", sql);

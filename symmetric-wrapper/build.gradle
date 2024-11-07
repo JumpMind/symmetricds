@@ -12,6 +12,7 @@ apply from: symAssembleDir + '/common.gradle'
         manifest {
             attributes(
                     "Main-Class": "org.jumpmind.symmetric.wrapper.Wrapper",
-                    "Class-Path": configurations.runtimeClasspath.collect { it.getName() }.join(' '))
+                    "Class-Path": configurations.runtimeClasspath.collect { it.getName() }.join(' '),
+                    "Premain-Class": "org.jumpmind.symmetric.wrapper.JavaAgent")
         }
     }

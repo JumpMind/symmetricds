@@ -88,7 +88,6 @@ import org.jumpmind.db.platform.redshift.RedshiftDatabasePlatform;
 import org.jumpmind.db.platform.sqlanywhere.SqlAnywhere12DatabasePlatform;
 import org.jumpmind.db.platform.sqlanywhere.SqlAnywhereDatabasePlatform;
 import org.jumpmind.db.platform.sqlite.SqliteDatabasePlatform;
-import org.jumpmind.db.platform.tibero.TiberoDatabasePlatform;
 import org.jumpmind.db.platform.voltdb.VoltDbDatabasePlatform;
 import org.jumpmind.db.sql.SqlException;
 import org.jumpmind.db.sql.SqlTemplateSettings;
@@ -151,7 +150,6 @@ public class JdbcDatabasePlatformFactory implements IDatabasePlatformFactory {
         addPlatform(platforms, DatabaseNamesConstants.SQLANYWHERE12, SqlAnywhere12DatabasePlatform.class);
         addPlatform(platforms, DatabaseNamesConstants.RAIMA, RaimaDatabasePlatform.class);
         addPlatform(platforms, DatabaseNamesConstants.REDSHIFT, RedshiftDatabasePlatform.class);
-        addPlatform(platforms, DatabaseNamesConstants.TIBERO, TiberoDatabasePlatform.class);
         addPlatform(platforms, DatabaseNamesConstants.VOLTDB, VoltDbDatabasePlatform.class);
         /**
          * Match on name + version to get a specific version
@@ -196,7 +194,6 @@ public class JdbcDatabasePlatformFactory implements IDatabasePlatformFactory {
         jdbcSubProtocolToPlatform.put(SqlAnywhereDatabasePlatform.JDBC_SUBPROTOCOL, SqlAnywhereDatabasePlatform.class);
         jdbcSubProtocolToPlatform.put(RaimaDatabasePlatform.JDBC_SUBPROTOCOL, RaimaDatabasePlatform.class);
         jdbcSubProtocolToPlatform.put(RedshiftDatabasePlatform.JDBC_SUBPROTOCOL, RedshiftDatabasePlatform.class);
-        jdbcSubProtocolToPlatform.put(TiberoDatabasePlatform.JDBC_SUBPROTOCOL_THIN, TiberoDatabasePlatform.class);
         jdbcSubProtocolToPlatform.put(VoltDbDatabasePlatform.JDBC_SUBPROTOCOL, VoltDbDatabasePlatform.class);
     }
 

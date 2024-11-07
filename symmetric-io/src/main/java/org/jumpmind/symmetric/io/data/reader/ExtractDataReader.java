@@ -379,6 +379,8 @@ public class ExtractDataReader implements IDataReader {
                     } else {
                         row.put(lobColumn.getName(), "");
                     }
+                } else {
+                    row.put(lobColumn.getName(), null);
                 }
             }
         }

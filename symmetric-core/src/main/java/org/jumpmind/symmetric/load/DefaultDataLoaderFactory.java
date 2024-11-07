@@ -21,6 +21,7 @@
 package org.jumpmind.symmetric.load;
 
 import java.sql.Timestamp;
+import java.util.Date;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -64,6 +65,7 @@ import org.jumpmind.symmetric.io.data.writer.ResolvedData;
 import org.jumpmind.symmetric.io.data.writer.TransformWriter;
 import org.jumpmind.symmetric.model.Channel;
 import org.jumpmind.symmetric.model.Data;
+import org.jumpmind.symmetric.model.Trigger;
 import org.jumpmind.symmetric.model.TriggerHistory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -261,6 +263,28 @@ public class DefaultDataLoaderFactory extends AbstractDataLoaderFactory implemen
                     }
                 }
                 return true;
+            }
+
+            @Override
+            protected void captureMissingDelete(Conflict conflict, AbstractDatabaseWriter writer, CsvData data) {
+                List<TriggerHistory> hists = engine.getTriggerRouterService().getActiveTriggerHistories(writer.getTargetTable().getName());
+                if (hists != null && !hists.isEmpty()) {
+                    TriggerHistory hist = hists.get(0);
+                    Trigger trigger = engine.getTriggerRouterService().getTriggerById(hist.getTriggerId(), false);
+                    if (trigger != null && trigger.isSyncOnIncomingBatch()) {
+                        Data d = new Data();
+                        d.setTableName(hist.getSourceTableName());
+                        d.setDataEventType(data.getDataEventType());
+                        d.setPkData(data.getCsvData(CsvData.PK_DATA));
+                        d.setOldData(data.getCsvData(CsvData.OLD_DATA));
+                        d.setTriggerHistory(hist);
+                        d.setChannelId(trigger.getChannelId());
+                        d.setSourceNodeId(data.getAttribute(CsvData.ATTRIBUTE_SOURCE_NODE_ID));
+                        d.setCreateTime(new Date());
+                        log.debug("Capturing delete of missing row with pk data of {}", d.getPkData());
+                        engine.getDataService().insertData(writer.getContext().findTransaction(), d);
+                    }
+                }
             }
         };
         DynamicDefaultDatabaseWriter writer = null;

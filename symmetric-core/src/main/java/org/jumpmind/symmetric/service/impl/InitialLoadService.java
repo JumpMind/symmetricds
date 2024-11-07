@@ -146,7 +146,7 @@ public class InitialLoadService extends AbstractService implements IInitialLoadS
                 engine.getNodeService().setInitialLoadEnded(null, status.getTargetNodeId());
             }
         } else {
-            engine.getDataService().updateTableReloadRequestsCancelled(status.getLoadId(), status.getTargetNodeId());
+            engine.getDataService().updateTableReloadRequestsCancelled(status.getLoadId(), status.getSourceNodeId());
         }
     }
 

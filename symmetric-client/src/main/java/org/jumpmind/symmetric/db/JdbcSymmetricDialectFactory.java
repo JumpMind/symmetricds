@@ -47,7 +47,6 @@ import org.jumpmind.db.platform.redshift.RedshiftDatabasePlatform;
 import org.jumpmind.db.platform.sqlanywhere.SqlAnywhere12DatabasePlatform;
 import org.jumpmind.db.platform.sqlanywhere.SqlAnywhereDatabasePlatform;
 import org.jumpmind.db.platform.sqlite.SqliteDatabasePlatform;
-import org.jumpmind.db.platform.tibero.TiberoDatabasePlatform;
 import org.jumpmind.db.platform.voltdb.VoltDbDatabasePlatform;
 import org.jumpmind.symmetric.db.ase.AseSymmetricDialect;
 import org.jumpmind.symmetric.db.db2.Db2SymmetricDialect;
@@ -79,7 +78,6 @@ import org.jumpmind.symmetric.db.redshift.RedshiftSymmetricDialect;
 import org.jumpmind.symmetric.db.sqlanywhere.SqlAnywhere12SymmetricDialect;
 import org.jumpmind.symmetric.db.sqlanywhere.SqlAnywhereSymmetricDialect;
 import org.jumpmind.symmetric.db.sqlite.SqliteJdbcSymmetricDialect;
-import org.jumpmind.symmetric.db.tibero.TiberoSymmetricDialect;
 import org.jumpmind.symmetric.db.voltdb.VoltDbSymmetricDialect;
 import org.jumpmind.symmetric.service.IParameterService;
 import org.jumpmind.util.AppUtils;
@@ -162,8 +160,6 @@ public class JdbcSymmetricDialectFactory implements ISymmetricDialectFactory {
             dialect = new SqliteJdbcSymmetricDialect(parameterService, platform);
         } else if (platform instanceof VoltDbDatabasePlatform) {
             dialect = new VoltDbSymmetricDialect(parameterService, platform);
-        } else if (platform instanceof TiberoDatabasePlatform) {
-            dialect = new TiberoSymmetricDialect(parameterService, platform);
         } else if (platform instanceof NuoDbDatabasePlatform) {
             dialect = new NuoDbSymmetricDialect(parameterService, platform);
         } else if (platform instanceof RaimaDatabasePlatform) {

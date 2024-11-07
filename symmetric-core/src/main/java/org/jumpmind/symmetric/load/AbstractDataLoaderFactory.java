@@ -63,6 +63,8 @@ public abstract class AbstractDataLoaderFactory {
                 parameterService.is(ParameterConstants.AUTO_RESOLVE_UNIQUE_INDEX_VIOLATION, true));
         settings.setAutoResolveUniqueIndexIgnoreNullValues(
                 parameterService.is(ParameterConstants.AUTO_RESOLVE_UNIQUE_INDEX_IGNORE_NULL_VALUES, true));
+        settings.setAutoResolveCaptureDeleteMissingRows(
+                parameterService.is(ParameterConstants.AUTO_RESOLVE_CAPTURE_DELETE_MISSING_ROWS));
         settings.setLogConflictResolution(parameterService.is(ParameterConstants.LOG_CONFLICT_RESOLUTION));
         settings.setTextColumnExpression(
                 parameterService.getString(ParameterConstants.DATA_LOADER_TEXT_COLUMN_EXPRESSION));

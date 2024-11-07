@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.apache.commons.lang3.StringUtils;
 import org.jumpmind.db.model.Table;
 import org.jumpmind.symmetric.ISymmetricEngine;
 import org.jumpmind.symmetric.SymmetricException;
@@ -69,13 +70,13 @@ public class JavaDatabaseWriterFilter extends DynamicDatabaseWriterFilter {
                         || filter.isFilterOnUpdate()
                                 && data.getDataEventType().equals(DataEventType.UPDATE)) {
                     if (writeMethod.equals(WriteMethod.BEFORE_WRITE)
-                            && filter.getBeforeWriteScript() != null) {
+                            && StringUtils.isNotBlank(filter.getBeforeWriteScript())) {
                         writeRow = getCompiledClass(filter.getBeforeWriteScript()).execute(context, table, data, error);
                     } else if (writeMethod.equals(WriteMethod.AFTER_WRITE)
-                            && filter.getAfterWriteScript() != null) {
+                            && StringUtils.isNotBlank(filter.getAfterWriteScript())) {
                         writeRow = getCompiledClass(filter.getAfterWriteScript()).execute(context, table, data, error);
                     } else if (writeMethod.equals(WriteMethod.HANDLE_ERROR)
-                            && filter.getHandleErrorScript() != null) {
+                            && StringUtils.isNotBlank(filter.getHandleErrorScript())) {
                         writeRow = getCompiledClass(filter.getHandleErrorScript()).execute(context, table, data, error);
                     }
                 }

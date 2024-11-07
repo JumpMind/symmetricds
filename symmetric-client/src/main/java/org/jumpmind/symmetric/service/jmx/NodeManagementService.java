@@ -95,6 +95,7 @@ public class NodeManagementService implements IBuiltInExtensionPoint, ISymmetric
     public void stop() {
         try {
             if (engine != null) {
+                log.info("JMX is stopping the following engine: {}", engine.getEngineName());
                 engine.stop();
                 engine.getParameterService().saveParameter(engine.getParameterService().getExternalId(), engine.getParameterService().getNodeGroupId(),
                         ParameterConstants.AUTO_START_ENGINE, "false", Constants.SYSTEM_USER);
@@ -106,6 +107,7 @@ public class NodeManagementService implements IBuiltInExtensionPoint, ISymmetric
 
     @ManagedOperation(description = "Run the outgoing purge process")
     public void purge() {
+        log.info("JMX is running the outgoing purge process from the following engine: {} ", engine.getEngineName());
         engine.getPurgeService().purgeOutgoing(true);
     }
 
@@ -126,6 +128,7 @@ public class NodeManagementService implements IBuiltInExtensionPoint, ISymmetric
 
     @ManagedOperation(description = "Synchronize the triggers")
     public void syncTriggers() {
+        log.info("JMX is running syncTriggers from the following engine: {} ", engine.getEngineName());
         engine.getTriggerRouterService().syncTriggers();
     }
 
@@ -211,12 +214,14 @@ public class NodeManagementService implements IBuiltInExtensionPoint, ISymmetric
     @ManagedOperation(description = "Add a node id to the list of nodes that will always get through the concurrency manager")
     @ManagedOperationParameters({ @ManagedOperationParameter(name = "nodeId", description = "The node id to add to the white list") })
     public void addNodeToWhiteList(String nodeId) {
+        log.info("JMX is adding node: {} to the white list from the following engine: {} ", nodeId, engine.getEngineName());
         engine.getConcurrentConnectionManager().addToWhitelist(nodeId);
     }
 
     @ManagedOperation(description = "Remove a node id to the list of nodes that will always get through the concurrency manager")
     @ManagedOperationParameters({ @ManagedOperationParameter(name = "nodeId", description = "The node id to remove from the white list") })
     public void removeNodeFromWhiteList(String nodeId) {
+        log.info("JMX is removing node: {} from the white list from the following engine: {} ", nodeId, engine.getEngineName());
         engine.getConcurrentConnectionManager().removeFromWhiteList(nodeId);
     }
 
@@ -225,6 +230,7 @@ public class NodeManagementService implements IBuiltInExtensionPoint, ISymmetric
                     + "  If the value is set to zero you are effectively disabling your transport"
                     + " (wihch can be useful for maintainance")
     public void setConcurrentWorkersMax(int value) {
+        log.info("JMX is setting the http.concurrent.workers.max to {} parameter from the following engine: {} ", value, engine.getEngineName());
         engine.getParameterService().saveParameter(ParameterConstants.CONCURRENT_WORKERS, value, "jmx");
     }
 
@@ -301,6 +307,7 @@ public class NodeManagementService implements IBuiltInExtensionPoint, ISymmetric
     public boolean setSyncEnabledForNode(String nodeId, boolean syncEnabled) {
         Node node = engine.getNodeService().findNode(nodeId);
         if (node != null) {
+            log.info("JMX is setting the SyncEnabled flag to {} from the following engine: {} ", syncEnabled, engine.getEngineName());
             node.setSyncEnabled(syncEnabled);
             engine.getNodeService().save(node);
             return true;
@@ -342,6 +349,11 @@ public class NodeManagementService implements IBuiltInExtensionPoint, ISymmetric
             @ManagedOperationParameter(name = "externalId", description = "The external id for a node") })
     public void ignoreNodeChannelForExternalId(boolean ignore, String channelId,
             String nodeGroupId, String externalId) {
+        if (ignore) {
+            log.info("JMX is disabling the {} channel for the externalId of {} from the following engine: {} ", channelId, externalId, engine.getEngineName());
+        } else {
+            log.info("JMX is enabling the {} channel for the externalId of {} from the following engine: {} ", channelId, externalId, engine.getEngineName());
+        }
         engine.getNodeService().ignoreNodeChannelForExternalId(ignore, channelId, nodeGroupId,
                 externalId);
     }

@@ -66,12 +66,14 @@ import org.jumpmind.db.platform.IDatabasePlatform;
 import org.jumpmind.db.sql.ISqlRowMapper;
 import org.jumpmind.db.sql.JdbcSqlTemplate;
 import org.jumpmind.db.sql.Row;
+import org.jumpmind.util.VersionUtil;
 
 /*
  * Reads a database model from a MySql database.
  */
 public class MySqlDdlReader extends AbstractJdbcDdlReader {
     private Boolean mariaDbDriver = null;
+    private boolean supportsGeneratedColumns;
 
     public MySqlDdlReader(IDatabasePlatform platform) {
         super(platform);
@@ -79,6 +81,8 @@ public class MySqlDdlReader extends AbstractJdbcDdlReader {
         setDefaultSchemaPattern(null);
         setDefaultTablePattern("%");
         setDefaultColumnPattern("%");
+        String versionString = platform.getSqlTemplate().getDatabaseProductVersion();
+        supportsGeneratedColumns = !VersionUtil.isOlderThanVersion(versionString, "5.7");
     }
 
     @Override
@@ -106,8 +110,8 @@ public class MySqlDdlReader extends AbstractJdbcDdlReader {
     }
 
     protected void determineExtraColumnInfo(Table table) {
-        String sql = "SELECT column_name, extra, column_type, generation_expression FROM information_schema.columns "
-                + "WHERE table_schema = ? AND table_name = ?";
+        String sql = "SELECT column_name, extra, column_type" + (supportsGeneratedColumns ? ", generation_expression" : "") +
+                " FROM information_schema.columns WHERE table_schema = ? AND table_name = ?";
         List<Row> rows = platform.getSqlTemplateDirty().query(sql, new Object[] { table.getCatalog(), table.getName() });
         for (Row row : rows) {
             String extra = row.getString("extra");
@@ -116,7 +120,7 @@ public class MySqlDdlReader extends AbstractJdbcDdlReader {
             if (StringUtils.isNotBlank(extra)) {
                 Column column = table.findColumn(columnName);
                 if (column != null) {
-                    if (column.isGenerated()) {
+                    if (supportsGeneratedColumns && column.isGenerated()) {
                         if (extra.equalsIgnoreCase("DEFAULT_GENERATED")) {
                             column.setGenerated(false);
                             column.setExpressionAsDefaultValue(true);

@@ -207,6 +207,7 @@ public class SqlRunner extends Thread {
                 }
                 try (SqlScriptReader sqlReader = new SqlScriptReader(new StringReader(sqlText))) {
                     sqlReader.setDelimiter(delimiter);
+                    sqlReader.setStripOutBlockComments(true);
                     String sql = sqlReader.readSqlStatement();
                     while (sql != null) {
                         JdbcSqlTemplate.close(stmt);
@@ -223,10 +224,18 @@ public class SqlRunner extends Thread {
                                 stmt.setFetchSize(maxResultsSize < 100 ? maxResultsSize : 100);
                             }
                         }
+                        if (settings != null && !settings.isAllowQueries()) {
+                            log.info("[{}] Blocked execution by {} in hidden mode: {}", db.getName(), user, sql.trim());
+                            throw new AbortedQueryException("No query access in hidden mode");
+                        }
+                        if (settings != null && !settings.isAllowDml() && !lowercaseSql.startsWith("select")) {
+                            log.info("[{}] Blocked execution by {} in read-only mode: {}", db.getName(), user, sql.trim());
+                            throw new AbortedQueryException("Only select statements are allowed in read-only mode");
+                        }
                         if (logAtDebug) {
-                            log.debug("[" + db.getName() + "] Executing: {}", sql.trim());
+                            log.debug("[" + db.getName() + "] Executing by {}: {}", user, sql.trim());
                         } else {
-                            log.info("[" + db.getName() + "] Executing: {}", sql.trim());
+                            log.info("[" + db.getName() + "] Executing by {}: {}", user, sql.trim());
                         }
                         if (sql.replaceAll("\\s", "").equalsIgnoreCase(COMMIT_COMMAND)) {
                             committed = true;
@@ -309,6 +318,8 @@ public class SqlRunner extends Thread {
                         sql = sqlReader.readSqlStatement();
                     }
                 }
+            } catch (AbortedQueryException ex) {
+                resultComponents.add(wrapTextInComponent(buildErrorMessage(ex.getMessage()), "marked"));
             } catch (Throwable ex) {
                 if (isCanceled) {
                     String canceledMessage = "Canceled successfully.\n\n" + sqlText;
@@ -357,6 +368,13 @@ public class SqlRunner extends Thread {
             errorMessage.append(ex.getMessage());
             errorMessage.append(ExceptionUtils.getStackTrace(ex));
         }
+        errorMessage.append("</span>");
+        return errorMessage.toString();
+    }
+
+    protected String buildErrorMessage(String message) {
+        StringBuilder errorMessage = new StringBuilder("<span style='color: red'>");
+        errorMessage.append(message);
         errorMessage.append("</span>");
         return errorMessage.toString();
     }

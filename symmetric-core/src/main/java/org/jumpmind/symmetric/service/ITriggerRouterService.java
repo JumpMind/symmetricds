@@ -165,6 +165,8 @@ public interface ITriggerRouterService {
 
     public void dropTriggers();
 
+    public void dropTriggers(boolean includeSymTriggers);
+
     public void dropTriggers(Set<String> tables);
 
     public void createTriggersOnChannelForTables(String channelId, String catalogName, String schemaName, List<String> tables, String lastUpdateBy);

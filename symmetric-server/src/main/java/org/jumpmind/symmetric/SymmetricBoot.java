@@ -40,6 +40,7 @@ import org.springframework.boot.builder.SpringApplicationBuilder;
 import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.boot.web.servlet.ServletContextInitializer;
 import org.springframework.boot.web.servlet.ServletRegistrationBean;
+import org.springframework.boot.web.servlet.support.SpringBootServletInitializer;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.context.annotation.Bean;
 
@@ -48,7 +49,7 @@ import jakarta.servlet.ServletContext;
 import jakarta.servlet.ServletException;
 
 @SpringBootApplication(scanBasePackages = { "org.jumpmind.symmetric", "com.jumpmind.symmetric" })
-public class SymmetricBoot {
+public class SymmetricBoot extends SpringBootServletInitializer {
     @Bean
     ServletContextInitializer servletContextInitializer() {
         return new ServletContextInitializer() {
@@ -111,5 +112,10 @@ public class SymmetricBoot {
 
     public static void main(String[] args) {
         run(args);
+    }
+
+    @Override
+    protected SpringApplicationBuilder configure(SpringApplicationBuilder builder) {
+        return builder.sources(SymmetricBoot.class);
     }
 }

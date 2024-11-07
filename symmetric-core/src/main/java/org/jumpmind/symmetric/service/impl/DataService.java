@@ -218,6 +218,7 @@ public class DataService extends AbstractService implements IDataService {
         return successful;
     }
 
+    @Override
     public int cancelTableReloadRequest(TableReloadRequest request) {
         return sqlTemplate.update(
                 getSql("cancelTableReloadRequest"),
@@ -235,6 +236,7 @@ public class DataService extends AbstractService implements IDataService {
                                 Types.VARCHAR, Types.VARCHAR, Types.VARCHAR });
     }
 
+    @Override
     public void insertTableReloadRequest(TableReloadRequest request) {
         ISqlTransaction transaction = null;
         try {
@@ -258,6 +260,7 @@ public class DataService extends AbstractService implements IDataService {
         }
     }
 
+    @Override
     public void insertTableReloadRequest(ISqlTransaction transaction, TableReloadRequest request) {
         Date time = new Date();
         request.setLastUpdateTime(time);
@@ -275,9 +278,11 @@ public class DataService extends AbstractService implements IDataService {
                         request.isDeleteFirst() ? 1 : 0, request.getChannelId() });
     }
 
+    @Override
     public TableReloadRequest getTableReloadRequest(final TableReloadRequestKey key) {
         return sqlTemplate.queryForObject(getSql("selectTableReloadRequest"),
                 new ISqlRowMapper<TableReloadRequest>() {
+                    @Override
                     public TableReloadRequest mapRow(Row rs) {
                         TableReloadRequest request = new TableReloadRequest(key);
                         request.setReloadSelect(rs.getString("reload_select"));
@@ -318,9 +323,11 @@ public class DataService extends AbstractService implements IDataService {
         return requests == null || requests.size() == 0 ? null : requests.get(0);
     }
 
+    @Override
     public List<TableReloadRequest> getTableReloadRequestToProcess(final String sourceNodeId) {
         return sqlTemplate.query(getSql("selectTableReloadRequestToProcess"),
                 new ISqlRowMapper<TableReloadRequest>() {
+                    @Override
                     public TableReloadRequest mapRow(Row rs) {
                         TableReloadRequest request = new TableReloadRequest();
                         request.setSourceNodeId(sourceNodeId);
@@ -342,9 +349,11 @@ public class DataService extends AbstractService implements IDataService {
                 }, sourceNodeId);
     }
 
+    @Override
     public List<TableReloadRequest> getTableReloadRequestToProcessByTarget(final String targetNodeId) {
         return sqlTemplate.query(getSql("selectTableReloadRequestToProcessByTarget"),
                 new ISqlRowMapper<TableReloadRequest>() {
+                    @Override
                     public TableReloadRequest mapRow(Row rs) {
                         TableReloadRequest request = new TableReloadRequest();
                         request.setSourceNodeId(rs.getString("source_node_id"));
@@ -371,41 +380,49 @@ public class DataService extends AbstractService implements IDataService {
                 new TableReloadRequestMapper());
     }
 
+    @Override
     public List<TableReloadStatus> getTableReloadStatus() {
         return sqlTemplateDirty.query(getSql("selectTableReloadStatus", "orderTableReloadStatus"),
                 new TableReloadStatusMapper());
     }
 
+    @Override
     public List<TableReloadStatus> getOutgoingTableReloadStatus() {
         return sqlTemplateDirty.query(getSql("selectTableReloadStatus", "whereSourceNodeId", "orderTableReloadStatus"),
                 new TableReloadStatusMapper(), engine.getNodeId());
     }
 
+    @Override
     public List<TableReloadStatus> getIncomingTableReloadStatus() {
         return sqlTemplateDirty.query(getSql("selectTableReloadStatus", "whereTargetNodeId", "orderTableReloadStatus"),
                 new TableReloadStatusMapper(), engine.getNodeId());
     }
 
+    @Override
     public List<TableReloadStatus> getActiveTableReloadStatus() {
         return sqlTemplateDirty.query(getSql("selectActiveTableReloadStatus", "orderTableReloadStatus"),
                 new TableReloadStatusMapper());
     }
 
+    @Override
     public List<TableReloadStatus> getActiveOutgoingTableReloadStatus() {
         return sqlTemplateDirty.query(getSql("selectActiveTableReloadStatus", "andSourceNodeId", "orderTableReloadStatus"),
                 new TableReloadStatusMapper(), engine.getNodeId());
     }
 
+    @Override
     public List<TableReloadStatus> getActiveIncomingTableReloadStatus() {
         return sqlTemplateDirty.query(getSql("selectActiveTableReloadStatus", "andTargetNodeId", "orderTableReloadStatus"),
                 new TableReloadStatusMapper(), engine.getNodeId());
     }
 
+    @Override
     public TableReloadStatus getTableReloadStatusByLoadIdAndSourceNodeId(long loadId, String sourceNodeId) {
         return sqlTemplateDirty.queryForObject(getSql("selectTableReloadStatusByLoadIdSourceNodeId"),
                 new TableReloadStatusMapper(), loadId, sourceNodeId);
     }
 
+    @Override
     public List<TableReloadStatus> getTableReloadStatusByTarget(String targetNodeId) {
         return sqlTemplateDirty.query(getSql("selectTableReloadStatusByTargetNodeId"),
                 new TableReloadStatusMapper(), targetNodeId);
@@ -463,6 +480,7 @@ public class DataService extends AbstractService implements IDataService {
         return requestMap;
     }
 
+    @Override
     public TableReloadStatus updateTableReloadStatusDataLoaded(ISqlTransaction transaction, long loadId,
             String sourceNodeId, long batchId, int batchCount, boolean isBulkLoaded) {
         int idType = symmetricDialect.getSqlTypeForIds();
@@ -497,6 +515,7 @@ public class DataService extends AbstractService implements IDataService {
         return null;
     }
 
+    @Override
     public void updateTableReloadStatusFailed(ISqlTransaction transaction, long loadId, String sourceNodeId, long batchId) {
         int idType = symmetricDialect.getSqlTypeForIds();
         if (platform.supportsParametersInSelect()) {
@@ -670,6 +689,7 @@ public class DataService extends AbstractService implements IDataService {
         }
     }
 
+    @Override
     public int updateTableReloadRequestsCancelled(long loadId, String sourceNodeId) {
         ISqlTransaction transaction = null;
         int count = 0;
@@ -809,6 +829,7 @@ public class DataService extends AbstractService implements IDataService {
     /**
      * @return If isLoad then return the inserted batch id otherwise return the data id
      */
+    @Override
     public long insertReloadEvent(ISqlTransaction transaction, Node targetNode,
             TriggerRouter triggerRouter, TriggerHistory triggerHistory,
             String overrideInitialLoadSelect, boolean isLoad, long loadId, String createBy,
@@ -1545,11 +1566,21 @@ public class DataService extends AbstractService implements IDataService {
         }
         boolean shouldAbandonParent = canParentBulkOperation && !canBulkOperation;
         String sourceNodeId = engine.getNodeService().findIdentity().getNodeId();
+        String tablePrefix = engine.getParameterService().getTablePrefix().toLowerCase();
         long firstBatchId = 0;
+        long totalDataCount = 0;
+        for (TriggerHistory triggerHist : triggerHistories) {
+            if (!triggerHist.getTriggerId().startsWith(tablePrefix)) {
+                totalDataCount = totalDataCount + 1;
+            }
+        }
+        processInfo.setTotalDataCount(totalDataCount);
         for (TriggerHistory triggerHistory : triggerHistories) {
+            if (!triggerHistory.getSourceTableNameLowerCase().startsWith(tablePrefix)) {
+                processInfo.incrementCurrentDataCount();
+            }
             List<TriggerRouter> triggerRouters = triggerRoutersByHistoryId.get(triggerHistory
                     .getTriggerHistoryId());
-            processInfo.incrementCurrentDataCount();
             checkInterrupted();
             for (TriggerRouter triggerRouter : triggerRouters) {
                 if (triggerRouter.getInitialLoadOrder() >= 0
@@ -1597,7 +1628,9 @@ public class DataService extends AbstractService implements IDataService {
                         long numberOfBatches = 1;
                         if (parameterService.is(ParameterConstants.INITIAL_LOAD_USE_EXTRACT_JOB)) {
                             if (rowCount > 0) {
+                                processInfo.setCurrentRowCount(processInfo.getCurrentRowCount() + rowCount);
                                 numberOfBatches = (long) Math.ceil((rowCount * transformMultiplier) / (channel.getMaxBatchSize() * 1f));
+                                processInfo.setCurrentBatchCount(processInfo.getCurrentBatchCount() + numberOfBatches);
                             }
                             long maxBatchSize = channel.getMaxBatchSize();
                             if (canBulkOperation && canParentBulkOperation && channel.getDataLoaderType().equals("bulk")) {
@@ -1909,6 +1942,7 @@ public class DataService extends AbstractService implements IDataService {
         }
     }
 
+    @Override
     public void insertSqlEvent(Node targetNode, String sql, boolean isLoad, long loadId,
             String createBy) {
         TriggerHistory history = engine.getTriggerRouterService()
@@ -1929,6 +1963,7 @@ public class DataService extends AbstractService implements IDataService {
         }
     }
 
+    @Override
     public void insertSqlEvent(ISqlTransaction transaction, Node targetNode, String sql,
             boolean isLoad, long loadId, String createBy) {
         insertSqlEvent(transaction, targetNode, sql, isLoad, loadId, createBy, Status.NE);
@@ -1942,6 +1977,7 @@ public class DataService extends AbstractService implements IDataService {
                 loadId, createBy, outgoingBatchStatus);
     }
 
+    @Override
     public void insertSqlEvent(ISqlTransaction transaction, TriggerHistory history,
             String channelId, Node targetNode, String sql, boolean isLoad, long loadId,
             String createBy) {
@@ -1968,6 +2004,7 @@ public class DataService extends AbstractService implements IDataService {
         }
     }
 
+    @Override
     public void insertScriptEvent(String channelId, Node targetNode, String script, boolean isLoad,
             long loadId, String createBy) {
         ISqlTransaction transaction = null;
@@ -1992,6 +2029,7 @@ public class DataService extends AbstractService implements IDataService {
         }
     }
 
+    @Override
     public void insertScriptEvent(ISqlTransaction transaction, String channelId,
             Node targetNode, String script, boolean isLoad, long loadId, String createBy) {
         TriggerHistory history = engine.getTriggerRouterService()
@@ -2012,10 +2050,12 @@ public class DataService extends AbstractService implements IDataService {
         }
     }
 
+    @Override
     public int countDataInRange(long firstDataId, long secondDataId) {
         return sqlTemplate.queryForInt(getSql("countDataInRangeSql"), firstDataId, secondDataId);
     }
 
+    @Override
     public int countData() {
         return sqlTemplate.queryForInt(getSql("countDataSql"));
     }
@@ -2133,6 +2173,7 @@ public class DataService extends AbstractService implements IDataService {
         return sb.toString();
     }
 
+    @Override
     public long insertData(Data data) {
         ISqlTransaction transaction = null;
         long dataId = -1;
@@ -2156,6 +2197,7 @@ public class DataService extends AbstractService implements IDataService {
         }
     }
 
+    @Override
     public long insertData(ISqlTransaction transaction, final Data data) {
         String sql = getSql("insertIntoDataSql");
         Object[] args = new Object[] { data.getTableName(), data.getDataEventType().getCode(), data.getRowData(),
@@ -2190,6 +2232,7 @@ public class DataService extends AbstractService implements IDataService {
         }
     }
 
+    @Override
     public void insertDataEvents(ISqlTransaction transaction, final List<DataEvent> events) {
         if (events.size() > 0) {
             transaction.prepare(getSql("insertIntoDataEventSql"));
@@ -2202,6 +2245,7 @@ public class DataService extends AbstractService implements IDataService {
         }
     }
 
+    @Override
     public void insertDataAndDataEventAndOutgoingBatch(Data data, String channelId,
             List<Node> nodes, boolean isLoad, long loadId, String createBy) {
         ISqlTransaction transaction = null;
@@ -2232,6 +2276,7 @@ public class DataService extends AbstractService implements IDataService {
     /**
      * @return The inserted batch id
      */
+    @Override
     public long insertDataAndDataEventAndOutgoingBatch(Data data, String nodeId,
             boolean isLoad, long loadId, String createBy) {
         long batchId = 0;
@@ -2284,6 +2329,7 @@ public class DataService extends AbstractService implements IDataService {
                 createBy, status, data.getTableName(), estimatedBatchRowCount);
     }
 
+    @Override
     public long insertDataAndDataEventAndOutgoingBatch(ISqlTransaction transaction, Data data,
             String nodeId, boolean isLoad, long loadId, String createBy,
             Status status, long estimatedBatchRowCount) {
@@ -2314,6 +2360,7 @@ public class DataService extends AbstractService implements IDataService {
         return outgoingBatch.getBatchId();
     }
 
+    @Override
     public String reloadNode(String nodeId, boolean reverseLoad, String createBy) {
         INodeService nodeService = engine.getNodeService();
         Node targetNode = engine.getNodeService().findNode(nodeId);
@@ -2342,6 +2389,7 @@ public class DataService extends AbstractService implements IDataService {
         }
     }
 
+    @Override
     public void sendScript(String nodeId, String script, boolean isLoad) {
         Node targetNode = engine.getNodeService().findNode(nodeId, true);
         TriggerHistory history = engine.getTriggerRouterService()
@@ -2357,6 +2405,7 @@ public class DataService extends AbstractService implements IDataService {
         }
     }
 
+    @Override
     public boolean sendSchema(String nodeId, String catalogName, String schemaName,
             String tableName, boolean isLoad, boolean excludeIndices, boolean excludeForeignKeys,
             boolean excludeDefaults) {
@@ -2381,6 +2430,7 @@ public class DataService extends AbstractService implements IDataService {
         }
     }
 
+    @Override
     public String sendSQL(String nodeId, String catalogName, String schemaName, String tableName,
             String sql) {
         Node sourceNode = engine.getNodeService().findIdentity();
@@ -2424,6 +2474,7 @@ public class DataService extends AbstractService implements IDataService {
         }
     }
 
+    @Override
     public String sendSQL(String nodeId, String sql) {
         String tableName = TableConstants.getTableName(parameterService.getTablePrefix(), TableConstants.SYM_NODE_HOST);
         Node sourceNode = engine.getNodeService().findIdentity();
@@ -2556,6 +2607,7 @@ public class DataService extends AbstractService implements IDataService {
         }
     }
 
+    @Override
     public void reloadMissingForeignKeyRowsReverse(String sourceNodeId, Table table, CsvData data, String channelId, boolean sendCorrectionToPeers) {
         try {
             IDatabasePlatform platform = engine.getTargetDialect().getPlatform();
@@ -2620,6 +2672,7 @@ public class DataService extends AbstractService implements IDataService {
         }
     }
 
+    @Override
     public void reloadMissingForeignKeyRowsForLoad(String sourceNodeId, long batchId, long rowNumber, Table table, CsvData data, String channelId) {
         String rowData = data.getCsvData(CsvData.ROW_DATA);
         // Replace all actual newlines and carriage returns with \n and \r strings
@@ -2665,6 +2718,7 @@ public class DataService extends AbstractService implements IDataService {
         }
     }
 
+    @Override
     public void reloadMissingForeignKeyRows(long batchId, String nodeId, long dataId, long rowNumber) {
         reloadMissingForeignKeyRows(findData(dataId), batchId, nodeId, dataId, rowNumber);
     }
@@ -2746,6 +2800,7 @@ public class DataService extends AbstractService implements IDataService {
         }
     }
 
+    @Override
     public void sendNewerDataToNode(ISqlTransaction transaction, String targetNodeId, String tableName, String pkCsvData,
             Date minCreateTime, String winningNodeId) {
         if (pkCsvData != null) {
@@ -2773,6 +2828,7 @@ public class DataService extends AbstractService implements IDataService {
      * 
      * @param node
      */
+    @Override
     public void insertHeartbeatEvent(Node node, boolean isReload) {
         ISqlTransaction transaction = null;
         try {
@@ -2818,10 +2874,12 @@ public class DataService extends AbstractService implements IDataService {
         }
     }
 
+    @Override
     public Data createData(String catalogName, String schemaName, String tableName) {
         return createData(catalogName, schemaName, tableName, null);
     }
 
+    @Override
     public Data createData(String catalogName, String schemaName, String tableName,
             String whereClause) {
         ISqlTransaction transaction = null;
@@ -2845,6 +2903,7 @@ public class DataService extends AbstractService implements IDataService {
         }
     }
 
+    @Override
     public Data createData(ISqlTransaction transaction, String catalogName, String schemaName,
             String tableName, String whereClause) {
         Data data = null;
@@ -2923,20 +2982,24 @@ public class DataService extends AbstractService implements IDataService {
         return data;
     }
 
+    @Override
     public long countDataGaps() {
         return sqlTemplate.queryForLong(getSql("countDataGapsSql"));
     }
 
+    @Override
     public List<DataGap> findDataGapsUnchecked() {
         return findDataGaps(false);
     }
 
+    @Override
     public List<DataGap> findDataGapsExpired() {
         return findDataGaps(true);
     }
 
     protected List<DataGap> findDataGaps(boolean isExpired) {
         return sqlTemplate.query(getSql("findDataGapsSql"), new ISqlRowMapper<DataGap>() {
+            @Override
             public DataGap mapRow(Row rs) {
                 return new DataGap(rs.getLong("start_id"), rs.getLong("end_id"), rs
                         .getDateTime("create_time"));
@@ -2944,6 +3007,7 @@ public class DataService extends AbstractService implements IDataService {
         }, isExpired ? 1 : 0);
     }
 
+    @Override
     public List<DataGap> findDataGaps() {
         final long maxDataToSelect = parameterService
                 .getLong(ParameterConstants.ROUTING_LARGEST_GAP_SIZE);
@@ -2977,6 +3041,7 @@ public class DataService extends AbstractService implements IDataService {
         return sqlTemplate.queryForLong(getSql("selectMaxDataEventDataIdSql"));
     }
 
+    @Override
     public void insertDataGap(DataGap gap) {
         ISqlTransaction transaction = null;
         try {
@@ -2998,6 +3063,7 @@ public class DataService extends AbstractService implements IDataService {
         }
     }
 
+    @Override
     public void insertDataGap(ISqlTransaction transaction, DataGap gap) {
         log.debug("Inserting data gap: {}", gap);
         transaction.prepareAndExecute(getSql("insertDataGapSql"),
@@ -3120,14 +3186,17 @@ public class DataService extends AbstractService implements IDataService {
         }
     }
 
+    @Override
     public Date findCreateTimeOfEvent(long dataId) {
         return sqlTemplate.queryForObject(getSql("findDataEventCreateTimeSql"), Date.class, dataId);
     }
 
+    @Override
     public Date findCreateTimeOfData(long dataId) {
         return sqlTemplate.queryForObject(getSql("findDataCreateTimeSql"), Date.class, dataId);
     }
 
+    @Override
     public Date findNextCreateTimeOfDataStartingAt(long dataId) {
         return findCreateTimeOfData(sqlTemplate.queryForObject(getSql("findMinDataSql"), Long.class, dataId));
     }
@@ -3168,6 +3237,7 @@ public class DataService extends AbstractService implements IDataService {
     /**
      * @see IDataService#heartbeat()
      */
+    @Override
     public void heartbeat(boolean force) {
         List<IHeartbeatListener> listeners = getHeartbeatListeners(force);
         if (listeners.size() > 0) {
@@ -3189,11 +3259,13 @@ public class DataService extends AbstractService implements IDataService {
         }
     }
 
+    @Override
     public List<Number> listDataIds(long batchId, String nodeId) {
         return sqlTemplateDirty.query(getSql("selectEventDataIdsSql", getDataOrderBy()),
                 new NumberMapper(), batchId, nodeId);
     }
 
+    @Override
     public List<Data> listData(long batchId, String nodeId, long startDataId, String channelId,
             final int maxRowsToRetrieve) {
         return sqlTemplateDirty.query(getDataSelectSql(batchId, startDataId, channelId),
@@ -3201,6 +3273,7 @@ public class DataService extends AbstractService implements IDataService {
                 new int[] { symmetricDialect.getSqlTypeForIds(), Types.VARCHAR, symmetricDialect.getSqlTypeForIds() });
     }
 
+    @Override
     public Data findData(long dataId) {
         return sqlTemplateDirty.queryForObject(getSql("selectData", "whereDataId"), new DataMapper(), dataId);
     }
@@ -3209,15 +3282,18 @@ public class DataService extends AbstractService implements IDataService {
         return sqlTemplateDirty.query(getSql("selectData", "whereDataIdBetween"), new DataMapper(), startDataId, endDataId);
     }
 
+    @Override
     public ISqlRowMapper<Data> getDataMapper() {
         return new DataMapper();
     }
 
+    @Override
     public ISqlReadCursor<Data> selectDataFor(Batch batch) {
         return selectDataFor(batch.getBatchId(), batch.getTargetNodeId(), engine.getConfigurationService()
                 .getNodeChannel(batch.getChannelId(), false).getChannel().isContainsBigLob());
     }
 
+    @Override
     public ISqlReadCursor<Data> selectDataFor(Long batchId, String targetNodeId, boolean isContainsBigLob) {
         return sqlTemplateDirty.queryForCursor(
                 getDataSelectSql(batchId, -1l, isContainsBigLob),
@@ -3225,6 +3301,7 @@ public class DataService extends AbstractService implements IDataService {
                 new int[] { symmetricDialect.getSqlTypeForIds(), Types.VARCHAR });
     }
 
+    @Override
     public ISqlReadCursor<Data> selectDataFor(Long batchId, String channelId) {
         return sqlTemplateDirty.queryForCursor(getDataSelectByBatchSql(batchId, -1l, channelId),
                 new DataMapper(), new Object[] { batchId }, new int[] { symmetricDialect.getSqlTypeForIds() });
@@ -3351,6 +3428,7 @@ public class DataService extends AbstractService implements IDataService {
             this.lookupTriggerHist = lookupTriggerHist;
         }
 
+        @Override
         public Data mapRow(Row row) {
             Data data = new Data();
             String rowData = row.getString("ROW_DATA", false);
@@ -3508,6 +3586,7 @@ public class DataService extends AbstractService implements IDataService {
         }
     }
 
+    @Override
     public int resendBatchAsReload(long batchId, String nodeId) {
         List<Data> dataList = new ArrayList<Data>();
         log.info("Resending as reload for batch {}-{}", nodeId, batchId);
@@ -3524,6 +3603,7 @@ public class DataService extends AbstractService implements IDataService {
         return dataList.size();
     }
 
+    @Override
     public int resendDataAsReload(long minDataId, long maxDataId) {
         List<Data> dataList = findData(minDataId, maxDataId);
         if (dataList.size() > 0) {
@@ -3615,6 +3695,7 @@ public class DataService extends AbstractService implements IDataService {
         data.setChannelId(Constants.CHANNEL_RELOAD);
     }
 
+    @Override
     public int reCaptureData(long minDataId, long maxDataId) {
         List<Data> dataList = findData(minDataId, maxDataId);
         int count = 0;
@@ -3650,6 +3731,9 @@ public class DataService extends AbstractService implements IDataService {
                         keys = data.toParsedPkData();
                     }
                     Object[] values = platform.getObjectValues(engine.getSymmetricDialect().getBinaryEncoding(), keys, table.getPrimaryKeyColumns());
+                    if (keys == null || values == null) {
+                        continue;
+                    }
                     Row row = new Row(keys.length);
                     String[] keyNames = table.getPrimaryKeyColumnNames();
                     for (int i = 0; i < keyNames.length && i < values.length; i++) {
@@ -3678,9 +3762,10 @@ public class DataService extends AbstractService implements IDataService {
                         data.setDataEventType(DataEventType.UPDATE);
                         data.setRowData(rowData);
                         data.setPkData(pkData);
-                        insertList.add(data);
                     } else if (rowData == null && data.getDataEventType() == DataEventType.DELETE) {
                         data.setPkData(pkData);
+                    }
+                    if (hasColumnDataIntegrity(data, hist)) {
                         insertList.add(data);
                     }
                     data.setTransactionId("recapture-" + ts);
@@ -3709,11 +3794,10 @@ public class DataService extends AbstractService implements IDataService {
         } finally {
             close(transaction);
         }
-        IDataService dataService = engine.getDataService();
         try {
             transaction = sqlTemplate.startSqlTransaction();
             for (Data data : insertList) {
-                dataService.insertData(transaction, data);
+                insertData(transaction, data);
             }
             transaction.commit();
         } catch (Exception ex) {
@@ -3725,6 +3809,26 @@ public class DataService extends AbstractService implements IDataService {
             close(transaction);
         }
         return insertList.size();
+    }
+
+    protected boolean hasColumnDataIntegrity(Data data, TriggerHistory hist) {
+        String[] colNames = hist.getParsedColumnNames();
+        String[] pkNames = hist.getParsedPkColumnNames();
+        String[] rowData = data.toParsedRowData();
+        String[] oldData = data.toParsedOldData();
+        String[] pkData = data.toParsedPkData();
+        DataEventType type = data.getDataEventType();
+        boolean okay = false;
+        if (type == DataEventType.INSERT) {
+            okay = rowData != null && rowData.length == colNames.length;
+        } else if (type == DataEventType.UPDATE) {
+            okay = rowData != null && rowData.length == colNames.length && (oldData == null || oldData.length == colNames.length) &&
+                    (pkData == null || pkData.length == pkNames.length) && (pkData != null || oldData != null);
+        } else if (type == DataEventType.DELETE) {
+            okay = (pkData == null || pkData.length == pkNames.length) && (oldData == null || oldData.length == colNames.length) &&
+                    (pkData != null || oldData != null);
+        }
+        return okay;
     }
 
     public static class LastCaptureByChannelMapper implements ISqlRowMapper<String> {

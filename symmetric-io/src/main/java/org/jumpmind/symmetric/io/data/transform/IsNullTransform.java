@@ -48,6 +48,8 @@ public class IsNullTransform implements ISingleNewAndOldValueColumnTransform, IB
             String expression = column.getTransformExpression();
             if (StringUtils.isNotEmpty(expression)) {
                 value = expression;
+            } else {
+                value = "";
             }
         }
         return new NewAndOldValue(column, data, value);

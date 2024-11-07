@@ -51,6 +51,7 @@ public class DatabaseWriterSettings {
     protected boolean autoResolvePrimaryKeyViolation = true;
     protected boolean autoResolveUniqueIndexViolation = true;
     protected boolean autoResolveUniqueIndexIgnoreNullValues = true;
+    protected boolean autoResolveCaptureDeleteMissingRows;
     protected boolean logConflictResolution = false;
     protected boolean logSqlParamsOnError = true;
     protected String textColumnExpression;
@@ -119,7 +120,7 @@ public class DatabaseWriterSettings {
     public void setTreatBitFieldsAsInteger(boolean treatBitFieldsAsInteger) {
         this.treatBitFieldsAsInteger = treatBitFieldsAsInteger;
     }
-    
+
     public boolean isUsePrimaryKeysFromSource() {
         return usePrimaryKeysFromSource;
     }
@@ -309,6 +310,14 @@ public class DatabaseWriterSettings {
 
     public void setAutoResolveUniqueIndexIgnoreNullValues(boolean autoResolveUniqueIndexIgnoreNullValues) {
         this.autoResolveUniqueIndexIgnoreNullValues = autoResolveUniqueIndexIgnoreNullValues;
+    }
+
+    public boolean isAutoResolveCaptureDeleteMissingRows() {
+        return autoResolveCaptureDeleteMissingRows;
+    }
+
+    public void setAutoResolveCaptureDeleteMissingRows(boolean autoResolveCaptureDeleteMissingRows) {
+        this.autoResolveCaptureDeleteMissingRows = autoResolveCaptureDeleteMissingRows;
     }
 
     public void setLogConflictResolution(boolean logConflictResolution) {

@@ -71,7 +71,7 @@ public class Db2v9SymmetricDialect extends Db2SymmetricDialect implements ISymme
         } finally {
             close(transaction);
         }
-        super.createRequiredDatabaseObjects();
+        super.createRequiredDatabaseObjectsImpl(ddl);
     }
 
     @Override

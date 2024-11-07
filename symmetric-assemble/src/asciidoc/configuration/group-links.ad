@@ -34,7 +34,8 @@ ifdef::pro[]
 .Advanced Options
 endif::pro[]
 
-Sync Configuration:: Determines if configuration is also sent through this group link.  This affects all SymmetricDS configuration tables except for sym_extract_request, sym_file_snapshot, sym_monitor_event, sym_node, sym_node_host, sym_node_security, sym_table_reload_request, and sym_table_reload_status.  By default this is checked and configuration will communicate on this path.  There are configurations that might cause configuration to continuously loop through the network. As a result, this might need to be unchecked for some links.
+Sync Configuration:: Determines if configuration is also sent through this group link during routing.  This affects all SymmetricDS configuration tables except for extract_request, monitor_event, node, node_host, node_security, table_reload_request, and table_reload_status.  By default this is checked and configuration will communicate on this path.  There are configurations that might cause configuration to continuously loop through the network. As a result, this might need to be unchecked for some links.
+Sync SQL/DDL:: Determines if SQL events (including DDL) is also sent through this group link during routing.  By default this is checked and SQL/DDL will communicate on this path.  When using DDL replication, this gives the user control of where to route DDL changes.
 Reversible:: Allows the communication link to send in the reverse direction if specified on the channel.  A push link can be overridden to pull and a pull link can be overridden to push using a setting on the channel.
 
 .Sample Group Links

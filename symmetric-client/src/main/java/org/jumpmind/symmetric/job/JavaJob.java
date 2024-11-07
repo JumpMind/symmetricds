@@ -81,7 +81,7 @@ public class JavaJob extends AbstractJob {
         }
     }
 
-    final static String CODE_START = "import org.jumpmind.symmetric.job.JavaJob;\n" +
+    public final static String CODE_START = "import org.jumpmind.symmetric.job.JavaJob;\n" +
             "import org.apache.commons.lang3.StringUtils;\n" +
             "import org.jumpmind.symmetric.ISymmetricEngine;\n" +
             "import org.jumpmind.symmetric.model.JobDefinition.JobType;\n" +
@@ -90,7 +90,7 @@ public class JavaJob extends AbstractJob {
             "public class CustomJavaJob extends JavaJob {\n" +
             "\n    " +
             " public void doJob(boolean force) throws Exception {\n";
-    final static String CODE_END = "\n}\n}";
+    public final static String CODE_END = "\n}\n}";
 
     public ISqlTemplate getSqlTemplate() {
         return sqlTemplate;

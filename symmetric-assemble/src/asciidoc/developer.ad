@@ -153,6 +153,10 @@ Implement this extension point to intercept the saving and rendering of the node
 ==== ISmtpPasswordFilter
 Implement this extension point to intercept the saving and rendering of the SMTP password.
 
+==== IPurgeListener
+Implement this extension point to execute some functionality before and after the
+execution of the Outgoing Purge or the Incoming Purge.
+
 ifdef::pro[]
 === Embedding in Android
 SymmetricDS has its web-enabled, fault-tolerant, database synchronization software available on the Android mobile computing platform. 

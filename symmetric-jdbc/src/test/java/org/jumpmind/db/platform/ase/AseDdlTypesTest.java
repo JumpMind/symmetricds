@@ -18,22 +18,29 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.jumpmind.db.platform.h2;
+package org.jumpmind.db.platform.ase;
 
 import org.jumpmind.db.AbstractDdlTypesTest;
 import org.jumpmind.db.platform.DatabaseNamesConstants;
 
-public class H2DdlTypesTest extends AbstractDdlTypesTest {
+public class AseDdlTypesTest extends AbstractDdlTypesTest {
     @Override
     protected String getName() {
-        return DatabaseNamesConstants.H2;
+        return DatabaseNamesConstants.ASE;
     }
 
     @Override
     protected String[] getDdlTypes() {
-        return new String[] { "VARCHAR(55)", "UUID", "VARCHAR_IGNORECASE(100)", "VARCHAR ARRAY",
-                "char(10)", "binary(10)", "varbinary(10)", "blob",
-                "boolean", "tinyint", "smallint", "integer", "bigint", "numeric", "real", "double precision", "decfloat",
-                "date", "time", "timestamp" };
+        return new String[] { "tinyint", "smallint", "integer", "bigint", "numeric", "decimal",
+                "float", "double precision", "real", // "smallmoney", "money",
+                "smalldatetime", "datetime", "date", "time", "bigdatetime", "bigtime",
+                "char(10)", "varchar(10)", "text", // "nchar(10)", "nvarchar(10)", "unitext", "unichar(10)", "univarchar(10)"
+                "binary(10)", "varbinary(10)", "image", "bit"
+        };
+    }
+
+    @Override
+    protected boolean hasNullDefault(String columnType) {
+        return !columnType.equals("bit");
     }
 }

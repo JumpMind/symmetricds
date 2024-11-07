@@ -241,13 +241,17 @@ public class TriggerRouterService extends AbstractService implements ITriggerRou
     }
 
     public void dropTriggers() {
+        dropTriggers(false);
+    }
+
+    public void dropTriggers(boolean includeSymTriggers) {
         TriggerRouterContext triggerRouterContext = new TriggerRouterContext();
         long ts = System.currentTimeMillis();
         List<TriggerHistory> activeHistories = getActiveTriggerHistories();
         triggerRouterContext.incrementActiveTriggerHistoriesTime(System.currentTimeMillis() - ts);
         Set<String> symTables = TableConstants.getTables(symmetricDialect.getTablePrefix());
         for (TriggerHistory history : activeHistories) {
-            if (!symTables.contains(history.getSourceTableName())) {
+            if (includeSymTriggers || !symTables.contains(history.getSourceTableName())) {
                 dropTriggers(history, (StringBuilder) null, triggerRouterContext);
             }
         }
@@ -1658,7 +1662,7 @@ public class TriggerRouterService extends AbstractService implements ITriggerRou
                     }
                     if (trigger == null) {
                         log.info("About to remove triggers for inactivated table: {}", history.getFullyQualifiedSourceTableName());
-                        dropTriggersIfNeeded(history, sqlBuffer, triggerRouterContext, foundTable);
+                        dropTriggersIfNeeded(history, sqlBuffer, triggerRouterContext, true);
                     } else if (!foundTable && history.getErrorMessage() == null) {
                         log.info("About to inactivate trigger history {} because table is missing: {}", history.getTriggerHistoryId(),
                                 trigger.qualifiedSourceTableName());

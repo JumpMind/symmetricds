@@ -187,6 +187,14 @@ task publishSymmetric {
                 include(name: 'symmetric-server-' + version + '.zip')
             }
         }
+        println "Setting latest file on SourceForge to symmetricds-$majorMinorVersion/symmetric-server-" + version + ".zip"
+        exec {
+            commandLine "curl"
+            args "-s", "-S", "-H", "Accept: application/json", "-X", "PUT",
+                "-d", "default=windows&default=mac&default=linux&default=bsd&default=solaris&default=others",
+                "-d", "api_key=$sourceforgeApiKey",
+                "https://sourceforge.net/projects/symmetricds/files/symmetricds/symmetricds-$majorMinorVersion/symmetric-server-" + version + ".zip"
+        }
     }
 }
 

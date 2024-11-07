@@ -1477,7 +1477,6 @@ public abstract class AbstractJdbcDdlReader implements IDdlReader {
         JdbcSqlTemplate sqlTemplate = (JdbcSqlTemplate) platform.getSqlTemplateDirty();
         return sqlTemplate.execute(new IConnectionCallback<List<String>>() {
             public List<String> execute(Connection connection) throws SQLException {
-                ArrayList<String> schemas = new ArrayList<String>();
                 IConnectionHandler connectionHandler = getConnectionHandler(catalog);
                 if (connectionHandler != null) {
                     connectionHandler.before(connection);
@@ -1487,24 +1486,13 @@ public abstract class AbstractJdbcDdlReader implements IDdlReader {
                 try {
                     try {
                         rs = meta.getSchemas();
+                        return processSchemaResultSet(rs, catalog);
                     } catch (SQLException e) {
-                        rs = meta.getSchemas("", null);
+                        close(rs);
+                        rs = null;
+                        rs = getSchemasHandleException(connection, meta, "", null);
+                        return processSchemaResultSet(rs, catalog);
                     }
-                    while (rs.next()) {
-                        int columnCount = rs.getMetaData().getColumnCount();
-                        String schema = rs.getString(1);
-                        String schemaCatalog = null;
-                        if (columnCount > 1) {
-                            schemaCatalog = rs.getString(2);
-                        }
-                        if ((StringUtils.isBlank(schemaCatalog) || StringUtils.isBlank(catalog)) && !schemas.contains(schema)) {
-                            schemas.add(schema);
-                        } else if (StringUtils.isNotBlank(schemaCatalog)
-                                && schemaCatalog.equals(catalog)) {
-                            schemas.add(schema);
-                        }
-                    }
-                    return schemas;
                 } finally {
                     if (connectionHandler != null) {
                         connectionHandler.after(connection);
@@ -1513,6 +1501,29 @@ public abstract class AbstractJdbcDdlReader implements IDdlReader {
                 }
             }
         });
+    }
+
+    protected ArrayList<String> processSchemaResultSet(ResultSet rs, String catalog) throws SQLException {
+        ArrayList<String> schemas = new ArrayList<String>();
+        while (rs.next()) {
+            int columnCount = rs.getMetaData().getColumnCount();
+            String schema = rs.getString(1);
+            String schemaCatalog = null;
+            if (columnCount > 1) {
+                schemaCatalog = rs.getString(2);
+            }
+            if ((StringUtils.isBlank(schemaCatalog) || StringUtils.isBlank(catalog)) && !schemas.contains(schema)) {
+                schemas.add(schema);
+            } else if (StringUtils.isNotBlank(schemaCatalog)
+                    && schemaCatalog.equals(catalog)) {
+                schemas.add(schema);
+            }
+        }
+        return schemas;
+    }
+
+    protected ResultSet getSchemasHandleException(Connection connection, DatabaseMetaData meta, String catalog, String schemaPattern) throws SQLException {
+        return meta.getSchemas(catalog, schemaPattern);
     }
 
     protected IConnectionHandler getConnectionHandler(String catalog) {

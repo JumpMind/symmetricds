@@ -43,7 +43,6 @@ import org.jumpmind.db.platform.mysql.MySqlDatabasePlatform;
 import org.jumpmind.db.platform.oracle.OracleDatabasePlatform;
 import org.jumpmind.db.platform.postgresql.PostgreSqlDatabasePlatform;
 import org.jumpmind.db.platform.sqlanywhere.SqlAnywhereDatabasePlatform;
-import org.jumpmind.db.platform.tibero.TiberoDatabasePlatform;
 import org.jumpmind.symmetric.io.AbstractWriterTest;
 import org.jumpmind.symmetric.io.data.CsvData;
 import org.jumpmind.symmetric.io.data.DataEventType;
@@ -52,8 +51,8 @@ import org.jumpmind.symmetric.io.data.writer.Conflict.ResolveConflict;
 import org.jumpmind.util.CollectionUtils;
 import org.jumpmind.util.Statistics;
 import org.junit.Assert;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class DatabaseWriterTest extends AbstractWriterTest {
@@ -335,7 +334,7 @@ public class DatabaseWriterTest extends AbstractWriterTest {
         String[] values = new String[TEST_COLUMNS.length];
         values[0] = getNextId();
         values[10] = "-0.0747663551401869";
-        String[] expectedValues = (String[]) ArrayUtils.clone(values);
+        String[] expectedValues = ArrayUtils.clone(values);
         massageExpectectedResultsForDialect(expectedValues);
         if (platform.getDatabaseInfo().isRequiredCharColumnEmptyStringSameAsNull()) {
             expectedValues[4] = AbstractDatabasePlatform.REQUIRED_FIELD_NULL_SUBSTITUTE;
@@ -348,7 +347,7 @@ public class DatabaseWriterTest extends AbstractWriterTest {
         String[] values = new String[TEST_COLUMNS.length];
         values[0] = getNextId();
         values[10] = "123456,99";
-        String[] expectedValues = (String[]) ArrayUtils.clone(values);
+        String[] expectedValues = ArrayUtils.clone(values);
         massageExpectectedResultsForDialect(expectedValues);
         if (platform.getDatabaseInfo().isRequiredCharColumnEmptyStringSameAsNull()) {
             expectedValues[4] = AbstractDatabasePlatform.REQUIRED_FIELD_NULL_SUBSTITUTE;
@@ -362,7 +361,7 @@ public class DatabaseWriterTest extends AbstractWriterTest {
         String[] values = { id, "it's /a/  string", "it's  -not-  null", "You're a \"character\"",
                 "Where are you?", "2007-12-31 02:33:45.000", "2007-12-31 23:59:59.000", "1", "13",
                 "9.95", "-0.0747" };
-        String[] expectedValues = (String[]) ArrayUtils.subarray(values, 0, values.length);
+        String[] expectedValues = ArrayUtils.subarray(values, 0, values.length);
         massageExpectectedResultsForDialect(expectedValues);
         writeData(new CsvData(DataEventType.UPDATE, new String[] { id }, values), expectedValues);
     }
@@ -407,7 +406,7 @@ public class DatabaseWriterTest extends AbstractWriterTest {
             values[1] = values[2] = "";
         }
         values[3] = values[4] = "";
-        String[] expectedValues = (String[]) ArrayUtils.clone(values);
+        String[] expectedValues = ArrayUtils.clone(values);
         if (platform.getDatabaseInfo().isRequiredCharColumnEmptyStringSameAsNull()) {
             expectedValues[4] = null;
         }
@@ -418,7 +417,7 @@ public class DatabaseWriterTest extends AbstractWriterTest {
     public void testStringNull() throws Exception {
         String[] values = new String[TEST_COLUMNS.length];
         values[0] = getNextId();
-        String[] expectedValues = (String[]) ArrayUtils.clone(values);
+        String[] expectedValues = ArrayUtils.clone(values);
         if (platform.getDatabaseInfo().isRequiredCharColumnEmptyStringSameAsNull()) {
             expectedValues[4] = AbstractDatabasePlatform.REQUIRED_FIELD_NULL_SUBSTITUTE;
         }
@@ -514,7 +513,7 @@ public class DatabaseWriterTest extends AbstractWriterTest {
             String[] values = { "dGVzdCAxIDIgMw==" };
             Table table = buildSourceTable(tableName, keys, columns);
             writeData(new TableCsvData(table, new CsvData(DataEventType.INSERT, values)));
-            String result = (String) platform
+            String result = platform
                     .getSqlTemplate()
                     .queryForObject(
                             "select encode(data,'escape') from pg_largeobject where loid in (select binary_data from test_postgres_binary_types)",
@@ -563,7 +562,7 @@ public class DatabaseWriterTest extends AbstractWriterTest {
             values[5] = values[5].replaceFirst(" \\d\\d:\\d\\d:\\d\\d\\.000", "");
         } else if (values[5] != null
                 && (!(platform instanceof OracleDatabasePlatform
-                        || platform instanceof TiberoDatabasePlatform
+
                         ||
                         // Only SqlServer 2000 and 2005 should not be mangled. 2008 now uses Date and Time data types.
                         ((platform instanceof MsSql2000DatabasePlatform || platform instanceof MsSql2005DatabasePlatform)
@@ -572,7 +571,7 @@ public class DatabaseWriterTest extends AbstractWriterTest {
                         || platform instanceof SqlAnywhereDatabasePlatform))) {
             values[5] = values[5].replaceFirst(" \\d\\d:\\d\\d:\\d\\d.*", "");
         } else if (values[5] != null && values[5].length() == 23 && (platform instanceof OracleDatabasePlatform
-                || platform instanceof TiberoDatabasePlatform)) {
+        )) {
             values[5] = values[5] + "0000";
         }
         if (values[6] != null && values[6].length() == 23) {
@@ -581,8 +580,7 @@ public class DatabaseWriterTest extends AbstractWriterTest {
         if (values[10] != null) {
             values[10] = values[10].replace(',', '.');
         }
-        if (values[10] != null && !(platform instanceof OracleDatabasePlatform)
-                && !(platform instanceof TiberoDatabasePlatform)) {
+        if (values[10] != null && !(platform instanceof OracleDatabasePlatform)) {
             int scale = 17;
             if (platform instanceof MySqlDatabasePlatform) {
                 scale = 16;
@@ -599,7 +597,6 @@ public class DatabaseWriterTest extends AbstractWriterTest {
     private String[] massageExpectectedResultsForDialect2(String[] values) {
         if (values[6] != null
                 && (!(platform instanceof OracleDatabasePlatform
-                        || platform instanceof TiberoDatabasePlatform
                         ||
                         // Only SqlServer 2000 and 2005 should not be mangled. 2008 now uses Date and Time data types.
                         ((platform instanceof MsSql2000DatabasePlatform || platform instanceof MsSql2005DatabasePlatform)
@@ -607,8 +604,7 @@ public class DatabaseWriterTest extends AbstractWriterTest {
                         || platform instanceof AseDatabasePlatform
                         || platform instanceof SqlAnywhereDatabasePlatform))) {
             values[6] = values[6].replaceFirst(" \\d\\d:\\d\\d:\\d\\d.*", "");
-        } else if (values[6] != null && values[6].length() == 23 && (platform instanceof OracleDatabasePlatform
-                || platform instanceof TiberoDatabasePlatform)) {
+        } else if (values[6] != null && values[6].length() == 23 && (platform instanceof OracleDatabasePlatform)) {
             values[6] = values[6] + "0000";
         }
         if (values[7] != null && values[7].length() == 23) {

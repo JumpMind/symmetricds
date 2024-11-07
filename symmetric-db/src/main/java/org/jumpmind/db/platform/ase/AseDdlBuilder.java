@@ -124,6 +124,7 @@ public class AseDdlBuilder extends AbstractDdlBuilder {
         databaseInfo.setDefaultSize(Types.VARBINARY, 254);
         databaseInfo.setDefaultSize(Types.CHAR, 254);
         databaseInfo.setDefaultSize(Types.VARCHAR, 254);
+        databaseInfo.setHasNullDefault(Types.BIT, false);
         databaseInfo.setMaxSize("DATETIME", 3);
         databaseInfo.setMaxSize("TIME", 3);
         databaseInfo.setMaxSize("BIGDATETIME", 6);
@@ -416,7 +417,7 @@ public class AseDdlBuilder extends AbstractDdlBuilder {
             for (Iterator<Map.Entry<Column, ArrayList<ColumnChange>>> changesPerColumnIt = columnChanges.entrySet().iterator(); changesPerColumnIt
                     .hasNext();) {
                 Map.Entry<Column, ArrayList<ColumnChange>> entry = changesPerColumnIt.next();
-                Column sourceColumn = (Column) entry.getKey();
+                Column sourceColumn = entry.getKey();
                 ArrayList<ColumnChange> changesPerColumn = entry.getValue();
                 // Sybase does not like us to use the ALTER TABLE ALTER
                 // statement if we don't actually
@@ -434,8 +435,7 @@ public class AseDdlBuilder extends AbstractDdlBuilder {
                     processColumnChange(sourceTable, targetTable, sourceColumn, targetColumn, ddl);
                 }
                 for (Iterator<ColumnChange> changeIt = changesPerColumn.iterator(); changeIt.hasNext();) {
-                    ((ColumnChange) changeIt.next()).apply(currentModel,
-                            delimitedIdentifierModeOn);
+                    changeIt.next().apply(currentModel, delimitedIdentifierModeOn);
                 }
             }
         }

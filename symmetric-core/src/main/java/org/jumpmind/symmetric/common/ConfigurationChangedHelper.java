@@ -335,7 +335,7 @@ public class ConfigurationChangedHelper {
         return set;
     }
 
-    private String getColumnValue(Table table, CsvData data, String name) {
+    public static String getColumnValue(Table table, CsvData data, String name) {
         String[] values = data.getParsedData(CsvData.ROW_DATA);
         if (values == null) {
             values = data.getParsedData(CsvData.PK_DATA);

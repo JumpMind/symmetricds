@@ -313,6 +313,7 @@ public class MySqlDdlBuilder extends AbstractDdlBuilder {
         }
     }
 
+    @Override
     protected boolean isFullTextIndex(IIndex index) {
         for (int idx = 0; idx < index.getColumnCount(); idx++) {
             IndexColumn indexColumn = index.getColumn(idx);
@@ -501,7 +502,7 @@ public class MySqlDdlBuilder extends AbstractDdlBuilder {
                 sqlType = tmpSqlType.toString();
             }
         }
-        if ("TINYBLOB".equalsIgnoreCase(column.getJdbcTypeName())) {
+        if ("TINYBLOB".equalsIgnoreCase(column.getJdbcTypeName()) || (pc != null && "TINYBLOB".equalsIgnoreCase(pc.getType()))) {
             // For some reason, MySql driver returns BINARY type for TINYBLOB instead of BLOB type
             sqlType = "TINYBLOB";
         } else if (pc == null && (column.getMappedTypeCode() == Types.CHAR || column.getMappedTypeCode() == Types.NCHAR) && column.getSizeAsInt() > 255) {

@@ -51,8 +51,8 @@ import org.jumpmind.db.sql.ISqlTemplate;
 import org.jumpmind.db.sql.ISqlTransaction;
 import org.jumpmind.db.sql.Row;
 import org.jumpmind.db.sql.SqlScript;
-import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
 public class DatabasePlatformTest {
@@ -136,6 +136,22 @@ public class DatabasePlatformTest {
         platform.alterTables(false, table);
         Table tableFromDatabase = platform.getTableFromCache(table.getName(), true);
         assertEquals(DEFAULT_VALUE, tableFromDatabase.getColumnWithName("NOTES").getDefaultValue());
+    }
+
+    @Test
+    public void testChangeNotNullToNullColumn() throws Exception {
+        Table table = new Table("TEST_NULL_DEFAULT");
+        table.addColumn(new Column("ID1", true));
+        table.getColumnWithName("ID1").setTypeCode(Types.INTEGER);
+        table.getColumnWithName("ID1").setRequired(true);
+        table.addColumn(new Column("ANUM"));
+        table.getColumnWithName("ANUM").setTypeCode(Types.INTEGER);
+        table.getColumnWithName("ANUM").setRequired(true);
+        dropCreateAndThenReadTable(table);
+        table.getColumnWithName("ANUM").setRequired(false);
+        platform.alterTables(false, table);
+        Table tableFromDatabase = platform.getTableFromCache(table.getName(), true);
+        assertFalse(tableFromDatabase.getColumnWithName("ANUM").isRequired());
     }
 
     @Test

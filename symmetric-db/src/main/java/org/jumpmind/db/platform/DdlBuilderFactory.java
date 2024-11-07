@@ -46,7 +46,6 @@ import org.jumpmind.db.platform.postgresql.PostgreSqlDdlBuilder95;
 import org.jumpmind.db.platform.redshift.RedshiftDdlBuilder;
 import org.jumpmind.db.platform.sqlanywhere.SqlAnywhereDdlBuilder;
 import org.jumpmind.db.platform.sqlite.SqliteDdlBuilder;
-import org.jumpmind.db.platform.tibero.TiberoDdlBuilder;
 import org.jumpmind.db.platform.voltdb.VoltDbDdlBuilder;
 import org.jumpmind.util.AppUtils;
 
@@ -121,8 +120,6 @@ public class DdlBuilderFactory implements IDdlBuilderFactory {
             return new NuoDbDdlBuilder();
         } else if (DatabaseNamesConstants.HBASE.equalsIgnoreCase(databaseName)) {
             return new HbaseDdlBuilder();
-        } else if (DatabaseNamesConstants.TIBERO.equalsIgnoreCase(databaseName)) {
-            return new TiberoDdlBuilder();
         } else {
             return null;
         }

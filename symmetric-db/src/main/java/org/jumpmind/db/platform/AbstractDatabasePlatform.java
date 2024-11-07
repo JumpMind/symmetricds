@@ -644,7 +644,11 @@ public abstract class AbstractDatabasePlatform implements IDatabasePlatform {
                 long diff = ts.getTime() - System.currentTimeMillis();
                 return "${ts" + diff + "}";
             } else {
-                return String.format("%tF %tT.%09d", ts, ts, ts.getNanos());
+                String formattedDate = StringUtils.stripEnd(String.format("%tF %tT.%09d", ts, ts, ts.getNanos()), "0");
+                if (formattedDate.endsWith(".")) {
+                    formattedDate = formattedDate + "0";
+                }
+                return formattedDate;
             }
         }
     }
@@ -754,7 +758,9 @@ public abstract class AbstractDatabasePlatform implements IDatabasePlatform {
             for (IndexColumn indexColumn : indices[0].getColumns()) {
                 Column column = result.getColumnWithName(indexColumn.getName());
                 if (column != null) {
+                    boolean required = column.isRequired();
                     column.setPrimaryKey(true);
+                    column.setRequired(required);
                 }
             }
         } else {

@@ -91,6 +91,7 @@ public class JdbcSqlTemplate extends AbstractSqlTemplate implements ISqlTemplate
     protected int[] objectDoesNotExistCodes;
     protected String[] objectDoesNotExistStates;
     protected int isolationLevel;
+    protected boolean isEmptyStringNulled;
 
     public JdbcSqlTemplate(DataSource dataSource, SqlTemplateSettings settings,
             SymmetricLobHandler lobHandler, DatabaseInfo databaseInfo) {
@@ -107,6 +108,7 @@ public class JdbcSqlTemplate extends AbstractSqlTemplate implements ISqlTemplate
         if (settings.getLogSqlBuilder() != null) {
             this.logSqlBuilder = settings.getLogSqlBuilder();
         }
+        this.isEmptyStringNulled = databaseInfo.isEmptyStringNulled();
     }
 
     protected Connection getConnection() throws SQLException {
@@ -1166,11 +1168,23 @@ public class JdbcSqlTemplate extends AbstractSqlTemplate implements ISqlTemplate
             int argType = argTypes != null && argTypes.length >= i ? argTypes[i - 1] : SqlTypeValue.TYPE_UNKNOWN;
             try {
                 if (argType == Types.BLOB && lobHandler != null && arg instanceof byte[]) {
-                    lobHandler.getLobCreator().setBlobAsBytes(ps, i, (byte[]) arg);
+                    if (isEmptyStringNulled && ((byte[]) arg).length == 0) {
+                        ps.setBlob(i, ps.getConnection().createBlob());
+                    } else {
+                        lobHandler.getLobCreator().setBlobAsBytes(ps, i, (byte[]) arg);
+                    }
                 } else if (argType == Types.BLOB && lobHandler != null && arg instanceof String) {
-                    lobHandler.getLobCreator().setBlobAsBytes(ps, i, arg.toString().getBytes(Charset.defaultCharset()));
+                    if (isEmptyStringNulled && arg.equals("")) {
+                        ps.setBlob(i, ps.getConnection().createBlob());
+                    } else {
+                        lobHandler.getLobCreator().setBlobAsBytes(ps, i, arg.toString().getBytes(Charset.defaultCharset()));
+                    }
                 } else if (argType == Types.CLOB && lobHandler != null) {
-                    lobHandler.getLobCreator().setClobAsString(ps, i, (String) arg);
+                    if (isEmptyStringNulled && arg != null && arg.equals("")) {
+                        ps.setClob(i, ps.getConnection().createClob());
+                    } else {
+                        lobHandler.getLobCreator().setClobAsString(ps, i, (String) arg);
+                    }
                 } else if ((argType == Types.DECIMAL || argType == Types.NUMERIC) && arg != null) {
                     setDecimalValue(ps, i, arg, argType);
                 } else if (argType == Types.TINYINT) {

@@ -267,7 +267,9 @@ public class TabularResultLayout extends VerticalLayout {
                                 e, NotificationVariant.LUMO_ERROR);
                     }
                 });
-                CommonUiUtils.configureEditor(grid);
+                if (settings.isAllowDml()) {
+                    CommonUiUtils.configureEditor(grid);
+                }
             }
             Shortcuts.addShortcutListener(grid, () -> {
                 Component parent = grid.getParent().orElse(null);

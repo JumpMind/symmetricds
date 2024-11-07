@@ -40,6 +40,7 @@ package org.jumpmind.db.platform.sqlanywhere;
  */
 
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.Date;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -81,6 +82,13 @@ public class SqlAnywhereDdlReader extends AbstractJdbcDdlReader {
         setDefaultCatalogPattern(null);
         setDefaultSchemaPattern(null);
         setDefaultTablePattern("%");
+    }
+
+    @Override
+    protected ResultSet getSchemasHandleException(Connection connection, DatabaseMetaData meta, String catalog, String schemaPattern) throws SQLException {
+        Statement stmt = connection.createStatement();
+        String sql = "select distinct table_owner as TABLE_SCHEM, table_qualifier as TABLE_CATALOG from sp_tables()";
+        return stmt.executeQuery(sql);
     }
 
     @Override

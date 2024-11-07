@@ -48,7 +48,6 @@ import org.jumpmind.db.platform.mssql.MsSql2008DatabasePlatform;
 import org.jumpmind.db.platform.mssql.MsSql2016DatabasePlatform;
 import org.jumpmind.db.platform.oracle.OracleDatabasePlatform;
 import org.jumpmind.db.platform.sqlanywhere.SqlAnywhereDatabasePlatform;
-import org.jumpmind.db.platform.tibero.TiberoDatabasePlatform;
 import org.jumpmind.symmetric.TestConstants;
 import org.jumpmind.symmetric.common.ParameterConstants;
 import org.jumpmind.symmetric.csv.CsvWriter;
@@ -703,7 +702,7 @@ abstract public class AbstractDataLoaderServiceTest extends AbstractServiceTest 
 
     protected String translateExpectedDate(String value) {
         IDatabasePlatform platform = engine.getDatabasePlatform();
-        if (value != null && (!(platform instanceof OracleDatabasePlatform || platform instanceof TiberoDatabasePlatform
+        if (value != null && (!(platform instanceof OracleDatabasePlatform 
                 || ((platform instanceof MsSql2000DatabasePlatform || platform instanceof MsSql2005DatabasePlatform)
                         && !(platform instanceof MsSql2008DatabasePlatform || platform instanceof MsSql2016DatabasePlatform))
                 || platform instanceof AseDatabasePlatform || platform instanceof SqlAnywhereDatabasePlatform))) {

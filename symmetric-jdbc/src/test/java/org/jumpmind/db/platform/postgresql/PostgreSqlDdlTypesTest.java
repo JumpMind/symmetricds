@@ -26,7 +26,11 @@ import org.jumpmind.db.platform.DatabaseNamesConstants;
 public class PostgreSqlDdlTypesTest extends AbstractDdlTypesTest {
     @Override
     protected String getName() {
-        return DatabaseNamesConstants.POSTGRESQL;
+        if (platform instanceof PostgreSql95DatabasePlatform) {
+            return DatabaseNamesConstants.POSTGRESQL95;
+        } else {
+            return DatabaseNamesConstants.POSTGRESQL;
+        }
     }
 
     @Override

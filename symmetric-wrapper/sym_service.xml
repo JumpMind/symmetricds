@@ -1,3 +1,8 @@
+<!--
+   To build sym_service.exe: 
+   on Linux: launch4j/launch4jc sym_service.xml
+   on Windows: launch4j/launch4j.exe sym_service.xml
+-->
 <launch4jConfig>
   <headerType>gui</headerType>
   <outfile>sym_service.exe</outfile>
@@ -9,7 +14,7 @@
     <path>%JAVA_HOME%;%PATH%</path>
     <requiresJdk>false</requiresJdk>
     <requires64Bit>false</requires64Bit>
-    <minVersion>1.17</minVersion>
+    <minVersion>17</minVersion>
   </jre>
   <versionInfo>
     <fileVersion>1.0.0.0</fileVersion>

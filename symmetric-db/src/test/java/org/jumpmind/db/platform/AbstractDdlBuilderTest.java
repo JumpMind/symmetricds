@@ -53,7 +53,6 @@ import org.jumpmind.db.platform.raima.RaimaDdlBuilder;
 import org.jumpmind.db.platform.redshift.RedshiftDdlBuilder;
 import org.jumpmind.db.platform.sqlanywhere.SqlAnywhereDdlBuilder;
 import org.jumpmind.db.platform.sqlite.SqliteDdlBuilder;
-import org.jumpmind.db.platform.tibero.TiberoDdlBuilder;
 import org.jumpmind.db.platform.voltdb.VoltDbDdlBuilder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -312,11 +311,6 @@ public class AbstractDdlBuilderTest {
                         true, new ForeignKeyAction[] {
                                 ForeignKeyAction.CASCADE, ForeignKeyAction.RESTRICT, ForeignKeyAction.NOACTION, ForeignKeyAction.SETDEFAULT,
                                 ForeignKeyAction.SETNULL }),
-                // Tibero
-                new DdlBuilderForeignKeySupport(new TiberoDdlBuilder(),
-                        true, new ForeignKeyAction[] {
-                                ForeignKeyAction.CASCADE, ForeignKeyAction.SETNULL },
-                        false, new ForeignKeyAction[] {}),
                 // VoltDb
                 new DdlBuilderForeignKeySupport(new VoltDbDdlBuilder(),
                         false, new ForeignKeyAction[] {},

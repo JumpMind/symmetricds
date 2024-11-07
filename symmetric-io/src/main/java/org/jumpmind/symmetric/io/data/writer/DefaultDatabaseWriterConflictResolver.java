@@ -344,9 +344,9 @@ public class DefaultDatabaseWriterConflictResolver extends AbstractDatabaseWrite
                             "create_time >= ? and (source_node_id is null or source_node_id != ?) order by create_time desc";
                     Object[] args = new Object[] { targetTable.getName(), ukCsv.toString(), loadingTs, writer.getBatch().getSourceNodeId() };
                     Row row = null;
-                    if (databaseWriter.getPlatform(targetTable).supportsMultiThreadedTransactions()) {
+                    if (databaseWriter.isLoadOnly() || databaseWriter.getPlatform(databaseWriter.getTablePrefix()).supportsMultiThreadedTransactions()) {
                         // we may have waited for another transaction to commit, so query with a new transaction
-                        row = databaseWriter.getPlatform(targetTable).getSqlTemplateDirty().queryForRow(sql, args);
+                        row = databaseWriter.getPlatform(databaseWriter.getTablePrefix()).getSqlTemplateDirty().queryForRow(sql, args);
                     } else {
                         row = writer.getContext().findTransaction().queryForRow(sql, args);
                     }
@@ -735,6 +735,10 @@ public class DefaultDatabaseWriterConflictResolver extends AbstractDatabaseWrite
             }
         }
         return true;
+    }
+
+    @Override
+    protected void captureMissingDelete(Conflict conflict, AbstractDatabaseWriter writer, CsvData data) {
     }
 
     protected String updateCteExpression(String sql, String nodeId) {

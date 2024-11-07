@@ -43,7 +43,6 @@ import org.jumpmind.db.platform.mysql.MySqlDatabasePlatform;
 import org.jumpmind.db.platform.oracle.OracleDatabasePlatform;
 import org.jumpmind.db.platform.postgresql.PostgreSqlDatabasePlatform;
 import org.jumpmind.db.platform.sqlanywhere.SqlAnywhereDatabasePlatform;
-import org.jumpmind.db.platform.tibero.TiberoDatabasePlatform;
 import org.jumpmind.db.util.BinaryEncoding;
 import org.jumpmind.symmetric.common.ContextConstants;
 import org.jumpmind.symmetric.io.AbstractWriterTest;
@@ -90,7 +89,7 @@ public abstract class AbstractBulkDatabaseWriterTest extends AbstractWriterTest 
 
     protected void insertAndVerify(String[] values, BinaryEncoding encoding) {
         List<CsvData> data = new ArrayList<CsvData>();
-        data.add(new CsvData(DataEventType.INSERT, (String[]) ArrayUtils.clone(values)));
+        data.add(new CsvData(DataEventType.INSERT, ArrayUtils.clone(values)));
         writeData(encoding, data);
         assertTestTableEquals(values[0], encoding, massageExpectectedResultsForDialect(values));
     }
@@ -316,7 +315,7 @@ public abstract class AbstractBulkDatabaseWriterTest extends AbstractWriterTest 
     }
 
     protected String[] massageExpectectedResultsForDialect(String[] values) {
-        if (values[5] != null && (!(platform instanceof OracleDatabasePlatform || platform instanceof TiberoDatabasePlatform
+        if (values[5] != null && (!(platform instanceof OracleDatabasePlatform
                 || ((platform instanceof MsSql2000DatabasePlatform || platform instanceof MsSql2005DatabasePlatform)
                         && !(platform instanceof MsSql2008DatabasePlatform || platform instanceof MsSql2016DatabasePlatform))
                 || platform instanceof AseDatabasePlatform || platform instanceof SqlAnywhereDatabasePlatform))) {

@@ -173,6 +173,10 @@ public class WrapperConfig {
         return getProperty(prop, "wrapper.app.output.restart", "");
     }
 
+    public String getMaxMemory() {
+        return getProperty(prop, "wrapper.java.maxmemory", "256");
+    }
+
     public ArrayList<String> getCommand(boolean isConsole) {
         ArrayList<String> cmdList = new ArrayList<String>();
         cmdList.add(getJavaCommand());

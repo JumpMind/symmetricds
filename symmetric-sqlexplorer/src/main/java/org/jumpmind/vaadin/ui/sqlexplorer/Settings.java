@@ -39,8 +39,15 @@ public class Settings implements Serializable {
     public static final String SQL_EXPLORER_MAX_HISTORY = "sql.explorer.max.history";
     public static final String SQL_EXPLORER_SHOW_RESULTS_IN_NEW_TABS = "sql.explorer.show.results.in.new.tabs";
     public static final String SQL_EXPLORER_SHOW_TRIGGERS = "sql.explorer.show.triggers";
-    List<SqlHistory> sqlHistory = new ArrayList<SqlHistory>();
-    TypedProperties properties = new TypedProperties();
+    protected List<SqlHistory> sqlHistory = new ArrayList<SqlHistory>();
+    protected TypedProperties properties = new TypedProperties();
+    protected boolean allowQueries = true;
+    protected boolean allowDml = true;
+    protected boolean allowImport = true;
+    protected boolean allowExport = true;
+    protected boolean allowFill = true;
+    protected boolean allowCompare = true;
+    protected boolean allowRepair = true;
 
     public Settings() {
         properties.put(SQL_EXPLORER_DELIMITER, ";");
@@ -94,5 +101,61 @@ public class Settings implements Serializable {
             }
         }
         return null;
+    }
+
+    public boolean isAllowQueries() {
+        return allowQueries;
+    }
+
+    public void setAllowQueries(boolean allowQueries) {
+        this.allowQueries = allowQueries;
+    }
+
+    public boolean isAllowDml() {
+        return allowDml;
+    }
+
+    public void setAllowDml(boolean allowAnySql) {
+        this.allowDml = allowAnySql;
+    }
+
+    public boolean isAllowImport() {
+        return allowImport;
+    }
+
+    public void setAllowImport(boolean allowImport) {
+        this.allowImport = allowImport;
+    }
+
+    public boolean isAllowExport() {
+        return allowExport;
+    }
+
+    public void setAllowExport(boolean allowExport) {
+        this.allowExport = allowExport;
+    }
+
+    public boolean isAllowFill() {
+        return allowFill;
+    }
+
+    public void setAllowFill(boolean allowFill) {
+        this.allowFill = allowFill;
+    }
+
+    public boolean isAllowCompare() {
+        return allowCompare;
+    }
+
+    public void setAllowCompare(boolean allowCompare) {
+        this.allowCompare = allowCompare;
+    }
+
+    public boolean isAllowRepair() {
+        return allowRepair;
+    }
+
+    public void setAllowRepair(boolean allowRepair) {
+        this.allowRepair = allowRepair;
     }
 }
