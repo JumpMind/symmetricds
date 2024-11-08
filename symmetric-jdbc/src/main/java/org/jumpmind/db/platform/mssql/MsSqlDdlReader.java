@@ -98,6 +98,10 @@ public class MsSqlDdlReader extends AbstractJdbcDdlReader {
         setDefaultCatalogPattern(null);
         setDefaultSchemaPattern(null);
         setDefaultTablePattern("%");
+        fetchSysAndUserDefinedTypes();
+    }
+
+    protected void fetchSysAndUserDefinedTypes() {
         JdbcSqlTemplate sqlTemplate = (JdbcSqlTemplate) platform.getSqlTemplateDirty();
         if (sqlTemplate.getDatabaseMajorVersion() >= 9) {
             String sql = "select name from sys.types where is_user_defined = 1";
