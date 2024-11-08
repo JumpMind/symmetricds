@@ -132,7 +132,8 @@ public class SnapshotUtil {
         File tmpDir = new File(parameterService.getTempDirectory(), dirName);
         tmpDir.mkdirs();
         log.info("Creating snapshot file in " + tmpDir.getAbsolutePath());
-        checkpoint(engine, listener, 0, 7);
+        int stepNumber = 0, totalSteps = 33;
+        checkpoint(engine, listener, stepNumber++, totalSteps);
         try {
             log.info("Calling beforeSnapshot()");
             for (ISnapshotUtilListener snapshotListener : engine.getExtensionService().getExtensionPointList(ISnapshotUtilListener.class)) {
@@ -142,13 +143,14 @@ public class SnapshotUtil {
             log.info("Call to beforeSnapshot() threw exception", e);
         }
         log.info("Exporting configuration");
-        checkpoint(engine, listener, 1, 7);
+        checkpoint(engine, listener, stepNumber++, totalSteps);
         try (FileWriter fwriter = new FileWriter(new File(tmpDir, "config-export.csv"))) {
             engine.getDataExtractorService().extractConfigurationStandalone(engine.getNodeService().findIdentity(),
                     fwriter, TableConstants.getConfigTablesExcludedFromExport());
         } catch (Exception e) {
             log.warn("Failed to export symmetric configuration", e);
         }
+        checkpoint(engine, listener, stepNumber++, totalSteps);
         File serviceConfFile = new File("conf/sym_service.conf");
         try {
             if (serviceConfFile.exists()) {
@@ -157,12 +159,15 @@ public class SnapshotUtil {
         } catch (Exception e) {
             log.warn("Failed to copy " + serviceConfFile.getName() + " to the snapshot directory", e);
         }
-        checkpoint(engine, listener, 2, 7);
+        checkpoint(engine, listener, stepNumber++, totalSteps);
         log.info("Writing table definitions");
         IDatabasePlatform targetPlatform = engine.getSymmetricDialect().getTargetPlatform();
         ISymmetricDialect targetDialect = engine.getTargetDialect();
         try {
-            HashMap<CatalogSchema, List<Table>> catalogSchemas = getTablesByCatalogSchema(engine);
+            HashMap<CatalogSchema, List<Table>> catalogSchemas = getTablesForCaptureByCatalogSchema(engine);
+            checkpoint(engine, listener, stepNumber++, totalSteps);
+            addTablesForLoadByCatalogSchema(engine, catalogSchemas);
+            checkpoint(engine, listener, stepNumber++, totalSteps);
             for (CatalogSchema catalogSchema : catalogSchemas.keySet()) {
                 DbExport export = new DbExport(targetPlatform);
                 boolean isDefaultCatalog = StringUtils.equalsIgnoreCase(catalogSchema.getCatalog(), targetPlatform.getDefaultCatalog());
@@ -196,24 +201,23 @@ public class SnapshotUtil {
         } catch (Exception e) {
             log.warn("Failed to export table definitions", e);
         }
-        checkpoint(engine, listener, 3, 7);
-        log.info("Writing runtime data");
+        checkpoint(engine, listener, stepNumber++, totalSteps);
+        log.info("Writing runtime data - nodes");
         String tablePrefix = engine.getTablePrefix();
         DbExport export = new DbExport(engine.getDatabasePlatform());
         export.setFormat(Format.CSV_DQUOTE);
         export.setNoCreateInfo(true);
+        export.setUseReadUncommitted(true);
         int maxBatches = parameterService.getInt(ParameterConstants.SNAPSHOT_MAX_BATCHES);
         int maxNodeChannels = parameterService.getInt(ParameterConstants.SNAPSHOT_MAX_NODE_CHANNELS);
         extract(export, new File(tmpDir, "sym_node_identity.csv"), TableConstants.getTableName(tablePrefix, TableConstants.SYM_NODE_IDENTITY));
         extract(export, new File(tmpDir, "sym_node.csv"), TableConstants.getTableName(tablePrefix, TableConstants.SYM_NODE));
-        extract(export, new File(tmpDir, "sym_node_security.csv"),
-                TableConstants.getTableName(tablePrefix, TableConstants.SYM_NODE_SECURITY));
-        extract(export, new File(tmpDir, "sym_node_host.csv"),
-                TableConstants.getTableName(tablePrefix, TableConstants.SYM_NODE_HOST));
-        extract(export, new File(tmpDir, "sym_trigger_hist.csv"),
-                TableConstants.getTableName(tablePrefix, TableConstants.SYM_TRIGGER_HIST));
+        extract(export, new File(tmpDir, "sym_node_security.csv"), TableConstants.getTableName(tablePrefix, TableConstants.SYM_NODE_SECURITY));
+        extract(export, new File(tmpDir, "sym_node_host.csv"), TableConstants.getTableName(tablePrefix, TableConstants.SYM_NODE_HOST));
         extract(export, maxNodeChannels, "", new File(tmpDir, "sym_node_channel_ctl.csv"),
                 TableConstants.getTableName(tablePrefix, TableConstants.SYM_NODE_CHANNEL_CTL));
+        checkpoint(engine, listener, stepNumber++, totalSteps);
+        log.info("Writing runtime data - locks");
         try {
             if (!parameterService.is(ParameterConstants.CLUSTER_LOCKING_ENABLED)) {
                 engine.getNodeCommunicationService().persistToTableForSnapshot();
@@ -222,26 +226,27 @@ public class SnapshotUtil {
         } catch (Exception e) {
             log.warn("Unable to add SYM_NODE_COMMUNICATION to the snapshot.", e);
         }
-        extract(export, new File(tmpDir, "sym_lock.csv"), TableConstants.getTableName(tablePrefix, TableConstants.SYM_LOCK));
         extract(export, maxNodeChannels, "", new File(tmpDir, "sym_node_communication.csv"),
                 TableConstants.getTableName(tablePrefix, TableConstants.SYM_NODE_COMMUNICATION));
-        extract(export, maxBatches, "where status = 'OK' order by batch_id desc", new File(tmpDir, "sym_outgoing_batch_ok.csv"),
-                TableConstants.getTableName(tablePrefix, TableConstants.SYM_OUTGOING_BATCH));
-        extract(export, maxBatches, "where status != 'OK' order by batch_id", new File(tmpDir, "sym_outgoing_batch_not_ok.csv"),
-                TableConstants.getTableName(tablePrefix, TableConstants.SYM_OUTGOING_BATCH));
-        extract(export, maxBatches, "where status = 'OK' order by create_time desc", new File(tmpDir, "sym_incoming_batch_ok.csv"),
-                TableConstants.getTableName(tablePrefix, TableConstants.SYM_INCOMING_BATCH));
-        extract(export, maxBatches, "where status != 'OK' order by create_time", new File(tmpDir, "sym_incoming_batch_not_ok.csv"),
-                TableConstants.getTableName(tablePrefix, TableConstants.SYM_INCOMING_BATCH));
-        extract(export, maxBatches, "order by start_id, end_id desc", new File(tmpDir, "sym_data_gap.csv"),
-                TableConstants.getTableName(tablePrefix, TableConstants.SYM_DATA_GAP));
+        extract(export, new File(tmpDir, "sym_context.csv"), TableConstants.getTableName(tablePrefix, TableConstants.SYM_CONTEXT));
+        extract(export, new File(tmpDir, "sym_lock.csv"), TableConstants.getTableName(tablePrefix, TableConstants.SYM_LOCK));
+        log.info("Writing runtime data - outgoing batch");
+        checkpoint(engine, listener, stepNumber++, totalSteps);
         Map<String, NodeSecurity> nodeSecurities = engine.getNodeService().findAllNodeSecurity(true);
         Map<String, Channel> channels = engine.getConfigurationService().getChannels(false);
         String byChannelId = "";
         if (nodeSecurities != null && channels != null && nodeSecurities.size() * channels.size() < maxNodeChannels) {
             byChannelId = "channel_id ,";
         }
-        extractQuery(engine.getSqlTemplate(), tmpDir + File.separator + "sym_outgoing_batch_summary.csv",
+        extract(export, maxBatches, "where status = 'OK' order by batch_id desc", new File(tmpDir, "sym_outgoing_batch_ok.csv"),
+                TableConstants.getTableName(tablePrefix, TableConstants.SYM_OUTGOING_BATCH));
+        checkpoint(engine, listener, stepNumber++, totalSteps);
+        extract(export, maxBatches, "where status != 'OK' order by batch_id", new File(tmpDir, "sym_outgoing_batch_not_ok.csv"),
+                TableConstants.getTableName(tablePrefix, TableConstants.SYM_OUTGOING_BATCH));
+        checkpoint(engine, listener, stepNumber++, totalSteps);
+        extract(export, maxBatches, "order by start_id, end_id desc", new File(tmpDir, "sym_data_gap.csv"),
+                TableConstants.getTableName(tablePrefix, TableConstants.SYM_DATA_GAP));
+        extractQuery(engine.getDatabasePlatform().getSqlTemplateDirty(), tmpDir + File.separator + "sym_outgoing_batch_summary.csv",
                 "select node_id, " + byChannelId + "status, count(*) batch_count, sum(data_row_count) data_row_count, sum(byte_count) byte_count, " +
                         "sum(error_flag) error_flag, min(create_time) min_create_time, sum(router_millis) router_millis, sum(extract_millis) extract_millis, " +
                         "sum(network_millis) network_millis, sum(filter_millis) filter_millis, sum(load_millis) load_millis, " +
@@ -249,7 +254,21 @@ public class SnapshotUtil {
                         "sum(missing_delete_count) missing_delete_count, sum(skip_count) skip_count, sum(ignore_count) ignore_count " +
                         "from " + TableConstants.getTableName(tablePrefix, TableConstants.SYM_OUTGOING_BATCH) +
                         " group by node_id, " + byChannelId + "status");
-        extractQuery(engine.getSqlTemplate(), tmpDir + File.separator + "sym_incoming_batch_summary.csv",
+        checkpoint(engine, listener, stepNumber++, totalSteps);
+        try {
+            outputSymDataForBatchesInError(engine, tmpDir);
+        } catch (Exception e) {
+            log.warn("Failed to export data from batch in error", e);
+        }
+        log.info("Writing runtime data - incoming batch");
+        checkpoint(engine, listener, stepNumber++, totalSteps);
+        extract(export, maxBatches, "where status = 'OK' order by create_time desc", new File(tmpDir, "sym_incoming_batch_ok.csv"),
+                TableConstants.getTableName(tablePrefix, TableConstants.SYM_INCOMING_BATCH));
+        checkpoint(engine, listener, stepNumber++, totalSteps);
+        extract(export, maxBatches, "where status != 'OK' order by create_time", new File(tmpDir, "sym_incoming_batch_not_ok.csv"),
+                TableConstants.getTableName(tablePrefix, TableConstants.SYM_INCOMING_BATCH));
+        checkpoint(engine, listener, stepNumber++, totalSteps);
+        extractQuery(engine.getDatabasePlatform().getSqlTemplateDirty(), tmpDir + File.separator + "sym_incoming_batch_summary.csv",
                 "select node_id, " + byChannelId + "status, count(*) batch_count, sum(data_row_count) data_row_count, sum(byte_count) byte_count, " +
                         "sum(error_flag) error_flag, min(create_time) min_create_time, sum(router_millis) router_millis, sum(extract_millis) extract_millis, " +
                         "sum(network_millis) network_millis, sum(filter_millis) filter_millis, sum(load_millis) load_millis, " +
@@ -257,38 +276,36 @@ public class SnapshotUtil {
                         "sum(missing_delete_count) missing_delete_count, sum(skip_count) skip_count, sum(ignore_count) ignore_count " +
                         "from " + TableConstants.getTableName(tablePrefix, TableConstants.SYM_INCOMING_BATCH) +
                         " group by node_id, " + byChannelId + "status");
-        try {
-            outputSymDataForBatchesInError(engine, tmpDir);
-        } catch (Exception e) {
-            log.warn("Failed to export data from batch in error", e);
-        }
-        extract(export, new File(tmpDir, "sym_table_reload_request.csv"),
-                TableConstants.getTableName(tablePrefix, TableConstants.SYM_TABLE_RELOAD_REQUEST));
-        extract(export, new File(tmpDir, "sym_table_reload_status.csv"),
-                TableConstants.getTableName(tablePrefix, TableConstants.SYM_TABLE_RELOAD_STATUS));
-        extract(export, new File(tmpDir, "sym_compare_request.csv"),
-                TableConstants.getTableName(tablePrefix, TableConstants.SYM_COMPARE_REQUEST));
-        extract(export, new File(tmpDir, "sym_compare_status.csv"),
-                TableConstants.getTableName(tablePrefix, TableConstants.SYM_COMPARE_STATUS));
-        extract(export, new File(tmpDir, "sym_compare_table_status.csv"),
-                TableConstants.getTableName(tablePrefix, TableConstants.SYM_COMPARE_TABLE_STATUS));
-        extract(export, 5000, "order by relative_dir, file_name", new File(tmpDir, "sym_file_snapshot.csv"),
-                TableConstants.getTableName(tablePrefix, TableConstants.SYM_FILE_SNAPSHOT));
-        export.setIgnoreMissingTables(true);
-        extract(export, new File(tmpDir, "sym_console_event.csv"),
-                TableConstants.getTableName(tablePrefix, TableConstants.SYM_CONSOLE_EVENT));
-        extract(export, new File(tmpDir, "sym_monitor_event.csv"),
-                TableConstants.getTableName(tablePrefix, TableConstants.SYM_MONITOR_EVENT));
-        extract(export, new File(tmpDir, "sym_extract_request.csv"),
-                TableConstants.getTableName(tablePrefix, TableConstants.SYM_EXTRACT_REQUEST));
-        extract(export, new File(tmpDir, "sym_context.csv"),
-                TableConstants.getTableName(tablePrefix, TableConstants.SYM_CONTEXT));
+        log.info("Writing runtime data - requests");
+        checkpoint(engine, listener, stepNumber++, totalSteps);
+        extract(export, new File(tmpDir, "sym_table_reload_request.csv"), TableConstants.getTableName(tablePrefix, TableConstants.SYM_TABLE_RELOAD_REQUEST));
+        extract(export, new File(tmpDir, "sym_table_reload_status.csv"), TableConstants.getTableName(tablePrefix, TableConstants.SYM_TABLE_RELOAD_STATUS));
+        extract(export, new File(tmpDir, "sym_extract_request.csv"), TableConstants.getTableName(tablePrefix, TableConstants.SYM_EXTRACT_REQUEST));
+        extract(export, new File(tmpDir, "sym_compare_request.csv"), TableConstants.getTableName(tablePrefix, TableConstants.SYM_COMPARE_REQUEST));
+        extract(export, new File(tmpDir, "sym_compare_status.csv"), TableConstants.getTableName(tablePrefix, TableConstants.SYM_COMPARE_STATUS));
+        extract(export, new File(tmpDir, "sym_compare_table_status.csv"), TableConstants.getTableName(tablePrefix, TableConstants.SYM_COMPARE_TABLE_STATUS));
+        extract(export, new File(tmpDir, "sym_registration_request.csv"), TableConstants.getTableName(tablePrefix, TableConstants.SYM_REGISTRATION_REQUEST));
+        log.info("Writing runtime data - history and stats");
+        checkpoint(engine, listener, stepNumber++, totalSteps);
+        extract(export, new File(tmpDir, "sym_trigger_hist.csv"), TableConstants.getTableName(tablePrefix, TableConstants.SYM_TRIGGER_HIST));
         extract(export, 10000, "order by start_time desc", new File(tmpDir, "sym_node_host_channel_stats.csv"),
                 TableConstants.getTableName(tablePrefix, TableConstants.SYM_NODE_HOST_CHANNEL_STATS));
+        checkpoint(engine, listener, stepNumber++, totalSteps);
         extract(export, 10000, "order by start_time desc", new File(tmpDir, "sym_node_host_stats.csv"),
                 TableConstants.getTableName(tablePrefix, TableConstants.SYM_NODE_HOST_STATS));
-        extract(export, new File(tmpDir, "sym_registration_request.csv"),
-                TableConstants.getTableName(tablePrefix, TableConstants.SYM_REGISTRATION_REQUEST));
+        checkpoint(engine, listener, stepNumber++, totalSteps);
+        if (parameterService.is(ParameterConstants.FILE_SYNC_ENABLE)) {
+            extract(export, 5000, "order by relative_dir, file_name", new File(tmpDir, "sym_file_snapshot.csv"),
+                    TableConstants.getTableName(tablePrefix, TableConstants.SYM_FILE_SNAPSHOT));
+        }
+        // Pro tables can be ignored if they are missing
+        export.setIgnoreMissingTables(true);
+        log.info("Writing runtime data - console and events");
+        checkpoint(engine, listener, stepNumber++, totalSteps);
+        extract(export, new File(tmpDir, "sym_console_event.csv"), TableConstants.getTableName(tablePrefix, TableConstants.SYM_CONSOLE_EVENT));
+        extract(export, new File(tmpDir, "sym_monitor_event.csv"), TableConstants.getTableName(tablePrefix, TableConstants.SYM_MONITOR_EVENT));
+        log.info("Writing runtime data - parameters");
+        checkpoint(engine, listener, stepNumber++, totalSteps);
         try {
             Properties effectiveParameters = engine.getParameterService().getAllParameters();
             Properties parameters = new Properties();
@@ -320,8 +337,8 @@ public class SnapshotUtil {
             Properties changedParameters = new Properties();
             Map<String, ParameterMetaData> parameters = ParameterConstants.getParameterMetaData();
             for (String key : parameters.keySet()) {
-                String defaultValue = defaultParameters.getProperty((String) key);
-                String currentValue = effectiveParameters.getProperty((String) key);
+                String defaultValue = defaultParameters.getProperty(key);
+                String currentValue = effectiveParameters.getProperty(key);
                 if (defaultValue == null && currentValue != null || (defaultValue != null && !defaultValue.equals(currentValue))) {
                     changedParameters.put(key, currentValue == null ? "" : currentValue);
                 }
@@ -342,6 +359,8 @@ public class SnapshotUtil {
         } catch (Exception e) {
             log.warn("Failed to export system information", e);
         }
+        log.info("Writing runtime data - log summaries");
+        checkpoint(engine, listener, stepNumber++, totalSteps);
         File logSummaryFile = new File(tmpDir, "log-summary.csv");
         try (OutputStream outputStream = new FileOutputStream(logSummaryFile);
                 CsvWriter csvWriter = new CsvWriter(outputStream, ',', Charset.defaultCharset())) {
@@ -359,6 +378,8 @@ public class SnapshotUtil {
         } catch (Exception e) {
             log.warn("Failed to write log summaries");
         }
+        log.info("Writing runtime data - platform specific");
+        checkpoint(engine, listener, stepNumber++, totalSteps);
         if (targetDialect instanceof FirebirdSymmetricDialect) {
             log.info("Writing Firebird info");
             final String[] monTables = { "mon$database", "mon$attachments", "mon$transactions", "mon$statements", "mon$io_stats",
@@ -379,7 +400,7 @@ public class SnapshotUtil {
             extractQuery(targetPlatform.getSqlTemplate(), tmpDir + File.separator + "mysql-session-variables.csv",
                     "show session variables");
         }
-        checkpoint(engine, listener, 4, 7);
+        checkpoint(engine, listener, stepNumber++, totalSteps);
         if (!engine.getParameterService().is(ParameterConstants.CLUSTER_LOCKING_ENABLED)) {
             try (FileOutputStream fos = new FileOutputStream(new File(tmpDir, "sym_data_gap_cache.csv"))) {
                 List<DataGap> gaps = engine.getRouterService().getDataGaps();
@@ -397,10 +418,12 @@ public class SnapshotUtil {
             }
         }
         log.info("Writing threads info");
+        checkpoint(engine, listener, stepNumber++, totalSteps);
         createThreadsFile(tmpDir.getPath(), false);
         createThreadsFile(tmpDir.getPath(), true);
         createThreadStatsFile(tmpDir.getPath());
         createProcessInfoFile(engine, tmpDir.getPath());
+        checkpoint(engine, listener, stepNumber++, totalSteps);
         try {
             log.info("Writing transactions file");
             List<Transaction> transactions = targetPlatform.getTransactions();
@@ -410,11 +433,17 @@ public class SnapshotUtil {
         } catch (Throwable e) {
             log.warn("Failed to create transactions file", e);
         }
+        log.info("Writing runtime stats");
+        checkpoint(engine, listener, stepNumber++, totalSteps);
         writeRuntimeStats(engine, tmpDir);
+        log.info("Writing job stats");
+        checkpoint(engine, listener, stepNumber++, totalSteps);
         writeJobsStats(engine, tmpDir);
+        checkpoint(engine, listener, stepNumber++, totalSteps);
         if ("true".equals(System.getProperty(SystemConstants.SYSPROP_STANDALONE_WEB))) {
             writeDirectoryListing(engine, tmpDir);
         }
+        checkpoint(engine, listener, stepNumber++, totalSteps);
         writeDirectoryStaging(engine, tmpDir);
         File logDir = LogSummaryAppenderUtils.getLogDir();
         if (logDir == null || !logDir.exists()) {
@@ -426,6 +455,7 @@ public class SnapshotUtil {
         if (!logDir.exists()) {
             logDir = new File("target");
         }
+        checkpoint(engine, listener, stepNumber++, totalSteps);
         if (logDir.exists()) {
             log.info("Copying log files");
             File[] files = logDir.listFiles();
@@ -451,12 +481,14 @@ public class SnapshotUtil {
                 log.warn("Failed to copy {}", backupConfig.getName());
             }
         }
-        checkpoint(engine, listener, 5, 7);
+        log.info("Packaging ZIP file");
+        checkpoint(engine, listener, stepNumber++, totalSteps);
         File jarFile = null;
         try {
             String filename = tmpDir.getName() + ".zip";
-            if (parameterService.is(ParameterConstants.SNAPSHOT_FILE_INCLUDE_HOSTNAME))
+            if (parameterService.is(ParameterConstants.SNAPSHOT_FILE_INCLUDE_HOSTNAME)) {
                 filename = AppUtils.getHostName() + "_" + filename;
+            }
             jarFile = new File(getSnapshotDirectory(engine), filename);
             ZipBuilder builder = new ZipBuilder(tmpDir, jarFile, new File[] { tmpDir });
             builder.build();
@@ -464,7 +496,7 @@ public class SnapshotUtil {
         } catch (Exception e) {
             throw new IoException("Failed to package snapshot files into archive", e);
         }
-        checkpoint(engine, listener, 6, 7);
+        checkpoint(engine, listener, stepNumber++, totalSteps);
         try {
             log.info("Calling afterSnapshot()");
             for (ISnapshotUtilListener snapshotListener : engine.getExtensionService().getExtensionPointList(ISnapshotUtilListener.class)) {
@@ -473,8 +505,8 @@ public class SnapshotUtil {
         } catch (Exception e) {
             log.info("Call to afterSnapshot() threw exception", e);
         }
-        checkpoint(engine, listener, 7, 7);
-        log.info("Done creating snapshot file");
+        checkpoint(engine, listener, stepNumber, totalSteps);
+        log.info("Done creating snapshot file in {} steps", stepNumber);
         return jarFile;
     }
 
@@ -591,7 +623,6 @@ public class SnapshotUtil {
     }
 
     protected static void writeRuntimeStats(ISymmetricEngine engine, File tmpDir) {
-        log.info("Writing runtime stats");
         try {
             Properties runtimeProperties = new Properties();
             DataSource dataSource = engine.getDatabasePlatform().getDataSource();
@@ -621,10 +652,10 @@ public class SnapshotUtil {
             try {
                 Method method = ManagementFactory.getOperatingSystemMXBean().getClass().getMethod("getTotalPhysicalMemorySize");
                 method.setAccessible(true);
-                runtimeProperties.setProperty("memory.system.total", df.format((Long) method.invoke(ManagementFactory.getOperatingSystemMXBean())));
+                runtimeProperties.setProperty("memory.system.total", df.format(method.invoke(ManagementFactory.getOperatingSystemMXBean())));
             } catch (Exception ignore) {
             }
-            OperatingSystemMXBean osBean = (OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
+            OperatingSystemMXBean osBean = ManagementFactory.getOperatingSystemMXBean();
             runtimeProperties.setProperty("os.name", System.getProperty("os.name") + " (" + System.getProperty("os.arch") + ")");
             runtimeProperties.setProperty("os.processors", String.valueOf(osBean.getAvailableProcessors()));
             runtimeProperties.setProperty("os.load.average", String.valueOf(osBean.getSystemLoadAverage()));
@@ -695,7 +726,6 @@ public class SnapshotUtil {
     }
 
     protected static void writeJobsStats(ISymmetricEngine engine, File tmpDir) {
-        log.info("Writing job stats");
         try (FileWriter writer = new FileWriter(new File(tmpDir, "jobs.txt"))) {
             IJobManager jobManager = engine.getJobManager();
             IClusterService clusterService = engine.getClusterService();
@@ -926,12 +956,6 @@ public class SnapshotUtil {
                 }
             }
         }
-    }
-
-    public static HashMap<CatalogSchema, List<Table>> getTablesByCatalogSchema(ISymmetricEngine engine) {
-        HashMap<CatalogSchema, List<Table>> tables = getTablesForCaptureByCatalogSchema(engine);
-        addTablesForLoadByCatalogSchema(engine, tables);
-        return tables;
     }
 
     public static HashMap<CatalogSchema, List<Table>> getTablesForCaptureByCatalogSchema(ISymmetricEngine engine) {

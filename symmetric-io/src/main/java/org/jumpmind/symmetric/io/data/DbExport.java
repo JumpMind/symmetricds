@@ -49,6 +49,7 @@ import org.jumpmind.db.sql.DmlStatement;
 import org.jumpmind.db.sql.DmlStatement.DmlType;
 import org.jumpmind.db.sql.DmlStatementOptions;
 import org.jumpmind.db.sql.ISqlRowMapper;
+import org.jumpmind.db.sql.ISqlTemplate;
 import org.jumpmind.db.sql.Row;
 import org.jumpmind.db.util.BinaryEncoding;
 import org.jumpmind.exception.IoException;
@@ -85,6 +86,7 @@ public class DbExport {
     private int maxRows = Integer.MAX_VALUE;
     private boolean useQuotedIdentifiers = true;
     private boolean useJdbcTimestampFormat = true;
+    private boolean useReadUncommitted;
     private IDatabasePlatform platform;
 
     public DbExport(IDatabasePlatform platform) {
@@ -214,9 +216,11 @@ public class DbExport {
                 if (StringUtils.isNotBlank(whereClause)) {
                     sql = String.format("%s %s", sql, whereClause);
                 }
-                platform.getSqlTemplate().query(sql, new ISqlRowMapper<Object>() {
+                ISqlTemplate sqlTemplate = useReadUncommitted ? platform.getSqlTemplateDirty() : platform.getSqlTemplate();
+                sqlTemplate.query(sql, new ISqlRowMapper<Object>() {
                     int rows = maxRows;
 
+                    @Override
                     public Object mapRow(Row row) {
                         if (rows > 0) {
                             writerWrapper.writeRow(row);
@@ -425,6 +429,14 @@ public class DbExport {
 
     public int getMaxRows() {
         return maxRows;
+    }
+
+    public boolean isUseReadUncommitted() {
+        return useReadUncommitted;
+    }
+
+    public void setUseReadUncommitted(boolean useReadUncommitted) {
+        this.useReadUncommitted = useReadUncommitted;
     }
 
     protected String getDatabaseName() {

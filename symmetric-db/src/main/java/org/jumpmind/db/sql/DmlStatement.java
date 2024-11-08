@@ -556,6 +556,11 @@ public class DmlStatement {
                 MsSql2008DdlBuilder.CHANGE_TRACKING_SYM_PREFIX + ":" + value);
     }
 
+    public static String updateCteExpression(String sql, String value) {
+        return sql.replaceAll(MsSql2008DdlBuilder.CHANGE_TRACKING_SYM_PREFIX + ":",
+                MsSql2008DdlBuilder.CHANGE_TRACKING_SYM_PREFIX + ":" + value);
+    }
+
     public static boolean[] getNullKeyValues(Object[] values) {
         boolean[] nullKeyValues = new boolean[values.length];
         for (int i = 0; i < values.length; i++) {
