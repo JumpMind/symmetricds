@@ -52,6 +52,7 @@ public class DbExportCommand extends AbstractCommandLauncher {
     private static final String OPTION_WHERE = "where";
     private static final String OPTION_EXCLUDE_COLUMNS = "exclude-columns";
     private static final String OPTION_USE_SYM_DB = "use-sym-db";
+    private static final String OPTION_USE_READ_UNCOMMITTED = "use-read-uncommitted";
 
     public DbExportCommand() {
         super("dbexport", "[tablename...]", "DbExport.Option.");
@@ -99,6 +100,7 @@ public class DbExportCommand extends AbstractCommandLauncher {
         addOption(options, "i", OPTION_COMMENTS, false);
         addOption(options, null, OPTION_EXCLUDE_COLUMNS, true);
         addOption(options, null, OPTION_USE_SYM_DB, false);
+        addOption(options, "u", OPTION_USE_READ_UNCOMMITTED, false);
     }
 
     @Override
@@ -155,6 +157,9 @@ public class DbExportCommand extends AbstractCommandLauncher {
         }
         if (line.hasOption(OPTION_USE_JDBC_TIMESTAMP_FORMAT)) {
             dbExport.setUseJdbcTimestampFormat("true".equalsIgnoreCase(line.getOptionValue(OPTION_USE_JDBC_TIMESTAMP_FORMAT)));
+        }
+        if (line.hasOption(OPTION_USE_READ_UNCOMMITTED)) {
+            dbExport.setUseReadUncommitted(true);
         }
         if (line.hasOption(OPTION_NO_QUALIFIERS)) {
             dbExport.setUseQuotedIdentifiers(false);

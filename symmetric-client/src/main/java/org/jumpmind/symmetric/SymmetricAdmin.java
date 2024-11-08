@@ -759,7 +759,10 @@ public class SymmetricAdmin extends AbstractCommandLauncher {
         String warFileName = popArg(args, "Filename");
         final File workingDirectory = new File(AppUtils.getSymHome() + "/.war");
         FileUtils.deleteDirectory(workingDirectory);
-        FileUtils.copyDirectory(new File(AppUtils.getSymHome() + "/web"), workingDirectory);
+        for (File file : FileUtils.listFiles(new File(AppUtils.getSymHome() + "/web/WEB-INF/lib"), FileFilterUtils.notFileFilter(
+                FileFilterUtils.or(FileFilterUtils.prefixFileFilter("jetty-"), FileFilterUtils.prefixFileFilter("websocket-"))), null)) {
+            FileUtils.copyToDirectory(file, new File(workingDirectory, "WEB-INF/lib"));
+        }
         File instanceIdFile = new File(AppUtils.getSymHome() + "/conf/instance.uuid");
         if (instanceIdFile.canRead()) {
             FileUtils.copyToDirectory(instanceIdFile, new File(workingDirectory, "WEB-INF/classes"));
@@ -1165,7 +1168,7 @@ public class SymmetricAdmin extends AbstractCommandLauncher {
                     new TypedProperties(System.getProperties()));
             TrustedCertificateEntry entry = bouncyCastleSecurityService.createTrustedCert(certData, "pem", alias, password);
             if (acceptAll) {
-                getSymmetricEngine().getSecurityService().installTrustedCert((TrustedCertificateEntry) entry);
+                getSymmetricEngine().getSecurityService().installTrustedCert(entry);
             } else {
                 Certificate trustedCertificate = entry.getTrustedCertificate();
                 String subject = "";
@@ -1204,7 +1207,7 @@ public class SymmetricAdmin extends AbstractCommandLauncher {
                     while (true) {
                         String answer = System.console().readLine("Accept this certificate? (Y/N): ");
                         if ("Y".equalsIgnoreCase(answer) || "YES".equalsIgnoreCase(answer)) {
-                            getSymmetricEngine().getSecurityService().installTrustedCert((TrustedCertificateEntry) entry);
+                            getSymmetricEngine().getSecurityService().installTrustedCert(entry);
                             break;
                         } else if ("N".equalsIgnoreCase(answer) || "NO".equalsIgnoreCase(answer)) {
                             break;

@@ -256,8 +256,26 @@ public class FileSnapshot implements Serializable {
         this.lastUpdateTime = lastUpdateTime;
     }
 
+    /***
+     * Checks whether two snapshots refer to the same file location (path + file name). Case-sensitive!
+     * 
+     * @return true, for identical file locations.
+     */
     public boolean sameFile(FileSnapshot file) {
         return StringUtils.equals(fileName, file.fileName) && StringUtils.equals(relativeDir, file.relativeDir);
+    }
+
+    /***
+     * Generates a search key helpful for indexing file locations (using a hash map). Logic must be equivalent to the sameFile() method!
+     * 
+     * @return fileName + '/' + relativeDir
+     */
+    public String generateSearchKey() {
+        StringBuilder b = new StringBuilder(fileName.length() + File.pathSeparator.length() + relativeDir.length());
+        b.append(fileName);
+        b.append(File.pathSeparator);
+        b.append(relativeDir);
+        return b.toString();
     }
 
     @Override

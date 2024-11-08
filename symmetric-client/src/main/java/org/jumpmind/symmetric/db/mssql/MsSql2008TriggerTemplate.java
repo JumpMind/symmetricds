@@ -29,7 +29,7 @@ import org.jumpmind.symmetric.model.Trigger;
 import org.jumpmind.symmetric.model.TriggerHistory;
 import org.jumpmind.util.FormatUtils;
 
-public class MsSql2008TriggerTemplate extends MsSqlTriggerTemplate {
+public class MsSql2008TriggerTemplate extends MsSql2005TriggerTemplate {
     public MsSql2008TriggerTemplate(ISymmetricDialect symmetricDialect) {
         super(symmetricDialect);
     }

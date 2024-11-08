@@ -21,10 +21,11 @@
 package org.jumpmind.symmetric.file;
 
 import java.util.ArrayList;
-import java.util.HashSet;
+import java.util.HashMap;
+import java.util.HashSet; 
 import java.util.List;
-import java.util.Set;
-
+import java.util.Map;
+import java.util.Set; 
 import org.jumpmind.symmetric.model.FileSnapshot;
 import org.jumpmind.symmetric.model.FileSnapshot.LastEventType;
 import org.jumpmind.symmetric.model.FileTriggerRouter;
@@ -64,41 +65,47 @@ public class DirectorySnapshot extends ArrayList<FileSnapshot> {
         this.addAll(toAdd);
     }
 
+    /**
+     * Reconciles file change events in this directory snapshot with another snapshot (more recent) and produces a list of differences (a delta-change).
+     * @param anotherSnapshot
+     * @return List of differences
+     */
     public DirectorySnapshot diff(DirectorySnapshot anotherSnapshot) {
+        HashMap<String, FileSnapshot> thisDirectoryDeltaMap = new HashMap<String, FileSnapshot>();
+        for (FileSnapshot fileSnapshot : this) {
+            thisDirectoryDeltaMap.put(fileSnapshot.generateSearchKey(), fileSnapshot);
+        }
+        HashMap<String, FileSnapshot> anotherDirectoryDeltaMap = new HashMap<String, FileSnapshot>();
         DirectorySnapshot differences = new DirectorySnapshot(anotherSnapshot.getFileTriggerRouter());
         for (FileSnapshot anotherFile : anotherSnapshot) {
-            boolean found = false;
-            for (FileSnapshot file : this) {
-                if (anotherFile.sameFile(file)) {
-                    found = true;
-                    if ((file.getLastEventType() == LastEventType.MODIFY ||
-                            file.getLastEventType() == LastEventType.CREATE)
-                            && anotherFile.getLastEventType() == LastEventType.CREATE) {
-                        file.setLastEventType(LastEventType.MODIFY);
-                        anotherFile.setLastEventType(LastEventType.MODIFY);
-                    }
-                    if (!anotherFile.equals(file)) {
-                        differences.add(anotherFile);
-                    }
-                }
+            String key = anotherFile.generateSearchKey();
+            FileSnapshot knownFile = thisDirectoryDeltaMap.get(key);
+            if (knownFile == null) {
+                differences.add(anotherFile);
+                anotherDirectoryDeltaMap.put(key, anotherFile);
+                continue;
             }
-            if (!found) {
+            thisDirectoryDeltaMap.remove(key);
+            if ((knownFile.getLastEventType() == LastEventType.MODIFY ||
+                    knownFile.getLastEventType() == LastEventType.CREATE)
+                    && anotherFile.getLastEventType() == LastEventType.CREATE) {
+                knownFile.setLastEventType(LastEventType.MODIFY);
+                anotherFile.setLastEventType(LastEventType.MODIFY);
+            }
+            if (!anotherFile.equals(knownFile)) {
                 differences.add(anotherFile);
             }
         }
-        for (FileSnapshot file : this) {
-            boolean found = false;
-            for (FileSnapshot anotherFile : anotherSnapshot) {
-                if (anotherFile.sameFile(file)) {
-                    found = true;
-                }
-            }
-            if (file.getLastEventType() != LastEventType.DELETE && !found) {
+        for (Map.Entry<String, FileSnapshot> entry : thisDirectoryDeltaMap.entrySet()) {
+            FileSnapshot file = entry.getValue();
+            if (file.getLastEventType() != LastEventType.DELETE) {
                 FileSnapshot copy = new FileSnapshot(file);
                 copy.setLastEventType(LastEventType.DELETE);
                 differences.add(copy);
             }
         }
+        thisDirectoryDeltaMap.clear();
+        anotherDirectoryDeltaMap.clear();
         return differences;
     }
 
