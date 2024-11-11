@@ -320,7 +320,7 @@ subprojects { subproject ->
         bouncyCastleVersion = '1.78.1'
         animalSnifferVersion = '1.21'
         jnaVersion = '5.13.0'
-        jettyVersion = '11.0.20'
+        jettyVersion = '11.0.24'
         websocketVersion = '2.1.0'
         env = System.getenv()
     }
