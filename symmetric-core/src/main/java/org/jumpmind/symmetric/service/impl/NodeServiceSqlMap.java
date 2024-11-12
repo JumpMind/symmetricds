@@ -147,5 +147,11 @@ public class NodeServiceSqlMap extends AbstractSqlMap {
                         + " and (exists (select * from $(node) nn where nn.node_id=n.created_at_node_id) OR n.created_at_node_id is null)");
         putSql("findRootNodeSql",
                 "where created_at_node_id = node_id or created_at_node_id is null order by created_at_node_id desc");
+        putSql("getNodesPausedSql",
+                "select node_id from $(node_channel_ctl) ctl join $(channel) c on c.channel_id = ctl.channel_id where c.channel_id not in ('config', 'heartbeat', 'monitor', 'dynamic') and ctl.suspend_enabled = 1");
+        putSql("pauseNodeByChannelSql",
+                "insert into $(node_channel_ctl) (node_id, channel_id, suspend_enabled) values (?,?,1)");
+        putSql("resumeNodeSql",
+                "delete from $(node_channel_ctl) where node_id = ?");
     }
 }

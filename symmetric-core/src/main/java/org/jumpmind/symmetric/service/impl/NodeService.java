@@ -1216,4 +1216,27 @@ public class NodeService extends AbstractService implements INodeService {
         }
         return false;
     }
+    
+    @Override
+    public Set<String> getNodesPaused() {
+    	Set<String> nodesPaused = new HashSet<String>();
+    	List<Row> rows = sqlTemplateDirty.query(getSql("getNodesPausedSql"));
+    	for (Row row : rows) {
+    		nodesPaused.add(row.getString("node_id"));
+    	}
+    	return nodesPaused;
+    }
+    
+    @Override
+    public void pauseNode(String nodeId, Set<String> channels) {
+    	for (String channel : channels) {
+    		sqlTemplate.update(getSql("pauseNodeByChannelSql"), nodeId, channel);
+    	}
+    	
+    }
+    
+    @Override
+    public void resumeNode(String nodeId) {
+    	sqlTemplate.update(getSql("resumeNodeSql"), nodeId);
+    }
 }

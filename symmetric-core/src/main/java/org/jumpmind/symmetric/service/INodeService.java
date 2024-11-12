@@ -230,4 +230,10 @@ public interface INodeService {
     public void resetNodeFailedLogins(String nodeId);
 
     public void incrementNodeFailedLogins(String nodeId);
+    
+    public Set<String> getNodesPaused();
+    
+    public void resumeNode(String nodeId);
+    
+    public void pauseNode(String nodeId, Set<String> channels);
 }

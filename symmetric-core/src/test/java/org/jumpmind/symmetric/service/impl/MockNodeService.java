@@ -397,4 +397,19 @@ public class MockNodeService implements INodeService {
     public boolean setInitialLoadEnded(ISqlTransaction transaction, String nodeId) {
         return false;
     }
+    @Override
+    public Set<String> getNodesPaused() {
+    	// TODO Auto-generated method stub
+    	return null;
+    } 
+    @Override
+    public void resumeNode(String nodeId) {
+    	// TODO Auto-generated method stub
+    	
+    }
+    @Override
+    public void pauseNode(String nodeId, Set<String> channels) {
+    	// TODO Auto-generated method stub
+    	
+    }
 }
