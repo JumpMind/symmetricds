@@ -125,6 +125,8 @@ public class ConfigurationServiceSqlMap extends AbstractSqlMap {
 
         putSql("deleteNodeChannelSql", "delete from $(node_channel_ctl) where channel_id=?   ");
 
+        putSql("deleteNodeChannelControlSql", "delete from $(node_channel_ctl) where node_id=? and channel_id=?");
+
         putSql("selectNodeGroupChannelWindowSql",
                 "select node_group_id, channel_id, start_time, end_time, enabled                    "
               + "  from $(node_group_channel_wnd) where node_group_id=? and channel_id=?   ");

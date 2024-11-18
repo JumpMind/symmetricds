@@ -439,6 +439,12 @@ public class ConfigurationService extends AbstractService implements IConfigurat
     }
 
     @Override
+    public void deleteNodeChannelControl(String nodeId, String channelId) {
+        sqlTemplate.update(getSql("deleteNodeChannelControlSql"), new Object[] { nodeId, channelId });
+        clearCache();
+    }
+
+    @Override
     public void deleteAllChannels() {
         sqlTemplate.update(getSql("deleteAllChannelsSql"));
         clearCache();
