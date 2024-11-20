@@ -85,6 +85,8 @@ public interface INodeService {
 
     public void deleteNodeHost(String nodeId);
 
+    public void deleteNodeHostInstance(String nodeId, String instanceId);
+
     public void deleteNodeSecurity(String nodeId);
 
     public void deleteNode(String nodeId, boolean syncChange);
