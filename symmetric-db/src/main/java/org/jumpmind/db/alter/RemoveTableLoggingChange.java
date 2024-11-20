@@ -18,16 +18,22 @@
  * specific language governing permissions and limitations
  * under the License.
  */
-package org.jumpmind.db.platform.postgresql;
+package org.jumpmind.db.alter;
 
-import org.jumpmind.db.platform.DatabaseNamesConstants;
+import org.jumpmind.db.model.Database;
+import org.jumpmind.db.model.Table;
 
 /**
- * PostgreSQL version 9.5 https://www.postgresql.org/docs/release/9.5.0/
+ * Represents the removal of logging mode (turning off) to a table. Subsequent operations will not be logged, if supported by target database.
  */
-public class PostgreSqlDdlBuilder95 extends PostgreSqlDdlBuilder {
-    public PostgreSqlDdlBuilder95() {
-        this.databaseName = DatabaseNamesConstants.POSTGRESQL95;
-        this.databaseInfo.setTableLevelLoggingSupported(true);
+public class RemoveTableLoggingChange extends TableChangeImplBase {
+    public RemoveTableLoggingChange(Table table) {
+        super(table);
+    }
+
+    @Override
+    public void apply(Database database, boolean caseSensitive) {
+        Table table = database.findTable(getChangedTable().getName(), caseSensitive);
+        table.setLogging(false);
     }
 }
