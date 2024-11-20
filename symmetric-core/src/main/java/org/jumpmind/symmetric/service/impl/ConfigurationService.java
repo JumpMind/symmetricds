@@ -99,8 +99,14 @@ public class ConfigurationService extends AbstractService implements IConfigurat
 
     @Override
     public boolean isBulkLoaderEnabled() {
-        List<Channel> channelList = sqlTemplate.query(getSql("selectChannelsSql", "whereBulkLoaderEnabledSql"), new ChannelMapper());
-        return channelList != null && !channelList.isEmpty();
+        boolean enabled = false;
+        for (Channel channel : getChannels(false).values()) {
+            if (channel.isReloadFlag() && channel.getDataLoaderType().equals("bulk")) {
+                enabled = true;
+                break;
+            }
+        }
+        return enabled;
     }
 
     @Override
