@@ -1010,8 +1010,14 @@ public class RouterService extends AbstractService implements IRouterService, IN
             nodeIds = new HashSet<String>(1);
             nodeIds.add(Constants.UNROUTED_NODE_ID);
         }
-        final boolean useCommonMode = ((context.isProduceGroupBatches() && !context.isForceNonCommon()) || context.isProduceCommonBatches())
+        boolean useCommonMode = ((context.isProduceGroupBatches() && !context.isForceNonCommon()) || context.isProduceCommonBatches())
                 && nodeIds.size() > 1;
+        if (eventType == DataEventType.RELOAD) {
+            // if where clause specified, take out of common mode
+            if (!StringUtils.isEmpty(dataMetaData.getData().getRowData())) {
+                useCommonMode = false;
+            }
+        }
         if (context.isProduceGroupBatches() && useCommonMode) {
             Map<Integer, Map<String, OutgoingBatch>> batchesByGroups = context.getBatchesByGroups();
             int groupKey = nodeIds.hashCode();
