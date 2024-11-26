@@ -59,6 +59,7 @@ import org.jumpmind.db.alter.AddForeignKeyChange;
 import org.jumpmind.db.alter.AddIndexChange;
 import org.jumpmind.db.alter.AddPrimaryKeyChange;
 import org.jumpmind.db.alter.AddTableChange;
+import org.jumpmind.db.alter.AddTableLoggingChange;
 import org.jumpmind.db.alter.ColumnAutoIncrementChange;
 import org.jumpmind.db.alter.ColumnAutoUpdateChange;
 import org.jumpmind.db.alter.ColumnDataTypeChange;
@@ -76,6 +77,7 @@ import org.jumpmind.db.alter.RemoveForeignKeyChange;
 import org.jumpmind.db.alter.RemoveIndexChange;
 import org.jumpmind.db.alter.RemovePrimaryKeyChange;
 import org.jumpmind.db.alter.RemoveTableChange;
+import org.jumpmind.db.alter.RemoveTableLoggingChange;
 import org.jumpmind.db.alter.TableChange;
 import org.jumpmind.db.model.Column;
 import org.jumpmind.db.model.Database;
@@ -390,8 +392,9 @@ public abstract class AbstractDdlBuilder implements IDdlBuilder {
     protected void processChanges(Database currentModel, Database desiredModel, List<IModelChange> changes,
             StringBuilder ddl) {
         // 1st pass: removing external constraints and indices
-        processChanges(currentModel, desiredModel, changes, ddl, new Class<?>[] { RemoveForeignKeyChange.class, RemoveIndexChange.class });
-        // 2nd pass: removing tables
+        processChanges(currentModel, desiredModel, changes, ddl, new Class<?>[] { RemoveForeignKeyChange.class, RemoveIndexChange.class,
+            RemoveTableLoggingChange.class });
+    // 2nd pass: removing tables
         processChanges(currentModel, desiredModel, changes, ddl, new Class<?>[] { RemoveTableChange.class });
         // 3rd pass: changing the structure of tables
         Predicate<IModelChange> predicate = new MultiInstanceofPredicate(new Class<?>[] { RemovePrimaryKeyChange.class,
@@ -403,8 +406,9 @@ public abstract class AbstractDdlBuilder implements IDdlBuilder {
         // 4th pass: adding tables
         processChanges(currentModel, desiredModel, changes, ddl, new Class<?>[] { AddTableChange.class });
         // 5th pass: adding external constraints and indices
-        processChanges(currentModel, desiredModel, changes, ddl, new Class<?>[] { AddForeignKeyChange.class, AddIndexChange.class });
-    }
+        processChanges(currentModel, desiredModel, changes, ddl, new Class<?>[] { AddForeignKeyChange.class, AddIndexChange.class,
+            AddTableLoggingChange.class });
+}
 
     protected void processChanges(Database currentModel, Database desiredModel, List<IModelChange> changes,
             StringBuilder ddl, Class<?>[] changeTypes) {
@@ -413,6 +417,8 @@ public abstract class AbstractDdlBuilder implements IDdlBuilder {
                 if (change.getClass().equals(changeType)) {
                     if (change.getClass().equals(AddTableChange.class)) {
                         processChange(currentModel, desiredModel, (AddTableChange) change, ddl);
+                    } else if (change.getClass().equals(RemoveTableLoggingChange.class)) {
+                        processChange(currentModel, desiredModel, (RemoveTableLoggingChange) change, ddl);
                     } else if (change.getClass().equals(RemoveTableChange.class)) {
                         processChange(currentModel, desiredModel, (RemoveTableChange) change, ddl);
                     } else if (change.getClass().equals(AddIndexChange.class)) {
@@ -447,6 +453,8 @@ public abstract class AbstractDdlBuilder implements IDdlBuilder {
                         processChange(currentModel, desiredModel, change, ddl);
                     } else if (change.getClass().equals(CopyColumnValueChange.class)) {
                         processChange(currentModel, desiredModel, (CopyColumnValueChange) change, ddl);
+                    } else if (change.getClass().equals(AddTableLoggingChange.class)) {
+                        processChange(currentModel, desiredModel, (AddTableLoggingChange) change, ddl);
                     } else {
                         processChange(currentModel, desiredModel, change, ddl);
                     }
@@ -460,6 +468,22 @@ public abstract class AbstractDdlBuilder implements IDdlBuilder {
      */
     protected void processChange(Database currentModel, Database desiredModel, IModelChange change, StringBuilder ddl) {
         log.warn("Change of type " + change.getClass() + " was not handled");
+    }
+
+    /**
+     * Punt change representing the removal of a foreign key to a database-specific override.
+     */
+    protected void processChange(Database currentModel, Database desiredModel, AddTableLoggingChange change,
+            StringBuilder ddl) {
+        log.warn("Change of type " + change.getClass() + " was not handled by database-specific DDL override!");
+    }
+
+    /**
+     * Punt change representing the removal of a foreign key to a database-specific override.
+     */
+    protected void processChange(Database currentModel, Database desiredModel, RemoveTableLoggingChange change,
+            StringBuilder ddl) {
+        log.warn("Change of type " + change.getClass() + " was not handled by database-specific DDL override!");
     }
 
     /**
@@ -1549,7 +1573,7 @@ public abstract class AbstractDdlBuilder implements IDdlBuilder {
      * Writes the table creation statement without the statement end.
      */
     protected void writeTableCreationStmt(Table table, StringBuilder ddl) {
-        ddl.append("CREATE TABLE ");
+        writeTableCreateOpeningStmt(table, ddl);
         // TODO Check side effect with shortened name table
         ddl.append(getFullyQualifiedTableNameShorten(table));
         println("(", ddl);
@@ -1568,6 +1592,13 @@ public abstract class AbstractDdlBuilder implements IDdlBuilder {
         if (isSpecifyIdentityGapLimit()) {
             writeIdentityGapLimit(ddl);
         }
+    }
+
+    /**
+     * Writes the beginning of the table create statement.
+     */
+    protected void writeTableCreateOpeningStmt(Table table, StringBuilder ddl) {
+        ddl.append("CREATE TABLE ");
     }
 
     /**

@@ -219,6 +219,9 @@ public class DatabaseXmlUtil {
                                     table.setName(attributeValue);
                                 } else if (attributeName.equalsIgnoreCase("description")) {
                                     table.setDescription(attributeValue);
+                                } if (attributeName.equalsIgnoreCase("logging")) {
+                                    boolean logging = !("false".equalsIgnoreCase(attributeValue));
+                                     table.setLogging(logging); 
                                 } else if (attributeName.equalsIgnoreCase("compression")) {
                                     if (CompressionTypes.PAGE.name().equalsIgnoreCase(attributeValue)) {
                                         table.setCompressionType(CompressionTypes.PAGE);
@@ -533,6 +536,9 @@ public class DatabaseXmlUtil {
             output.write("\t<table name=\"" + StringEscapeUtils.escapeXml10(table.getName()) + "\"");
             if (table.getCompressionType() != CompressionTypes.NONE) {
                 output.write(" compression=\"" + table.getCompressionType().name() + "\"");
+            }
+            if (table.getLogging() != true) {
+                output.write(" logging=\"false\"");
             }
             output.write(">\n");
             for (Column column : table.getColumns()) {

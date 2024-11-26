@@ -87,6 +87,8 @@ public class DatabaseInfo {
      */
     private boolean uniqueEmbedded = true;
     private boolean triggersSupported = true;
+    /** Whether table-level logging manipulation (to reduce overhead of data loads) is supported. */
+    private boolean tableLevelLoggingSupported = false;
     private boolean triggersCreateOrReplaceSupported = false;
     /** Whether identity specification is supported for non-primary key columns. */
     private boolean nonPKIdentityColumnsSupported = true;
@@ -397,6 +399,20 @@ public class DatabaseInfo {
      */
     public void setIndicesSupported(boolean supportingIndices) {
         this.indicesSupported = supportingIndices;
+    }
+
+    /**
+     * Determines whether table-level logging is supported.
+     */
+    public boolean isTableLevelLoggingSupported() {
+        return this.tableLevelLoggingSupported;
+    }
+
+    /**
+     * Specifies whether table-level logging is supported.
+     */
+    public void setTableLevelLoggingSupported(boolean value) {
+        this.tableLevelLoggingSupported = value;
     }
 
     /**

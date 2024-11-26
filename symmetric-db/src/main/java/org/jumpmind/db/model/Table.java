@@ -95,6 +95,8 @@ public class Table implements Serializable, Cloneable, Comparable<Table> {
     private ArrayList<Column> lobColumns;
     private CompressionTypes compressionType = CompressionTypes.NONE;
     private boolean madeAllColumnsPrimaryKey;
+    /** This table has changes logged by the transaction log. */
+    private boolean logging = true;
 
     public Table() {
     }
@@ -1030,6 +1032,8 @@ public class Table implements Serializable, Cloneable, Comparable<Table> {
         result.append(getSchema());
         result.append("; type=");
         result.append(getType());
+        result.append("; logging=");
+        result.append(getLogging());
         result.append("] columns:");
         for (int idx = 0; idx < getColumnCount(); idx++) {
             result.append(" ");
@@ -1596,5 +1600,18 @@ public class Table implements Serializable, Cloneable, Comparable<Table> {
             }
             return 0;
         }
+    }
+
+    /**
+     * Reports table's mode for write-ahead (transaction) log.
+     * 
+     * @return true, if table is being logged
+     */
+    public boolean getLogging() {
+        return this.logging;
+    }
+
+    public void setLogging(boolean value) {
+        this.logging = value;
     }
 }

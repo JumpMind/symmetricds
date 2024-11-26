@@ -643,7 +643,7 @@ public class DefaultDatabaseWriter extends AbstractDatabaseWriter {
             getTargetTransaction().commit();
             statistics.get(batch).startTimer(DataWriterStatisticConstants.LOADMILLIS);
             xml = data.getParsedData(CsvData.ROW_DATA)[0];
-            log.info("About to create table using the following definition: {}", xml);
+            log.info("Incoming batch contains the following table definition: {}", xml);
             StringReader reader = new StringReader(xml);
             db = DatabaseXmlUtil.read(reader, false);
             hasMatchingPlatform = getTargetPlatform().hasMatchingPlatform(db);
