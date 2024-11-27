@@ -184,6 +184,10 @@ public class NodeService extends AbstractService implements INodeService {
         platform.getSqlTemplate().update(getSql("deleteNodeHostSql"), new Object[] { nodeId });
     }
 
+    public void deleteNodeHostInstance(String nodeId, String instanceId) {
+        platform.getSqlTemplate().update(getSql("deleteNodeHostInstanceSql"), new Object[] { nodeId, instanceId });
+    }
+
     public void updateNodeHost(NodeHost nodeHost) {
         if (sqlTemplate.update(getSql("updateNodeHostSql"),
                 new Object[] { nodeHost.getIpAddress(), nodeHost.getInstanceId(), nodeHost.getOsUser(),
