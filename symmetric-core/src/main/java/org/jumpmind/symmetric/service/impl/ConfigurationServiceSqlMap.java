@@ -78,8 +78,6 @@ public class ConfigurationServiceSqlMap extends AbstractSqlMap {
         putSql("orderChannelsBySql", "order by c.processing_order asc, c.channel_id");
         
         putSql("whereChannelIdLikeSql", "where channel_id like ?");
-        
-        putSql("whereBulkLoaderEnabledSql", "where data_loader_type='bulk' and reload_flag=1");
 
         putSql("selectNodeChannelsSql",
             "select c.channel_id, c.processing_order,       "
