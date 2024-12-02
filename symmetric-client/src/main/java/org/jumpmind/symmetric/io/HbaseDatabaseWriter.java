@@ -140,4 +140,8 @@ public class HbaseDatabaseWriter extends AbstractDatabaseWriter {
     @Override
     protected void logFailureDetails(Throwable e, CsvData data, boolean logLastDmlDetails) {
     }
+    
+    @Override
+    protected void logFailureDetails(Throwable e, CsvData data, boolean logLastDmlDetails, Object[] values) {
+    }
 }
