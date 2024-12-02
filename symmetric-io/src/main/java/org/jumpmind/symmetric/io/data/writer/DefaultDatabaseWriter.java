@@ -234,6 +234,7 @@ public class DefaultDatabaseWriter extends AbstractDatabaseWriter {
 
     @Override
     protected LoadStatus insert(CsvData data) {
+        String[] values = null;
         try {
             if (isRequiresSavePointsInTransaction && conflictResolver != null && conflictResolver.isIgnoreRow(this, data)) {
                 statistics.get(batch).increment(DataWriterStatisticConstants.IGNOREROWCOUNT);
@@ -253,7 +254,7 @@ public class DefaultDatabaseWriter extends AbstractDatabaseWriter {
             boolean isFindAndThrowException = false;
             try {
                 Conflict conflict = writerSettings.pickConflict(targetTable, batch);
-                String[] values = (String[]) ArrayUtils.addAll(getRowData(data, CsvData.ROW_DATA),
+                values = (String[]) ArrayUtils.addAll(getRowData(data, CsvData.ROW_DATA),
                         currentDmlStatement.getLookupKeyData(getLookupDataMap(data, conflict)));
                 long count = execute(data, values);
                 statistics.get(batch).increment(DataWriterStatisticConstants.INSERTCOUNT, count);
@@ -279,7 +280,7 @@ public class DefaultDatabaseWriter extends AbstractDatabaseWriter {
                 }
             }
         } catch (RuntimeException ex) {
-            logFailureDetails(ex, data, true);
+            logFailureDetails(ex, data, true, values);
             throw ex;
         } finally {
             statistics.get(batch).stopTimer(DataWriterStatisticConstants.LOADMILLIS);
@@ -922,6 +923,11 @@ public class DefaultDatabaseWriter extends AbstractDatabaseWriter {
 
     @Override
     protected void logFailureDetails(Throwable e, CsvData data, boolean logLastDmlDetails) {
+        logFailureDetails(e, data, logLastDmlDetails, currentDmlValues);
+    }
+
+    @Override
+    protected void logFailureDetails(Throwable e, CsvData data, boolean logLastDmlDetails, Object[] values) {
         StringBuilder failureMessage = new StringBuilder();
         failureMessage.append("Failed to process ");
         failureMessage.append(data.getDataEventType().toString().toLowerCase());
@@ -934,7 +940,7 @@ public class DefaultDatabaseWriter extends AbstractDatabaseWriter {
             boolean shouldLogRawSql = true;
             if (writerSettings.isLogSqlParamsOnError()) {
                 failureMessage.append("Failed sql was: ");
-                String dynamicSQL = logSqlBuilder.buildDynamicSqlForLog(currentDmlStatement.getSql(), currentDmlValues, currentDmlStatement.getTypes());
+                String dynamicSQL = logSqlBuilder.buildDynamicSqlForLog(currentDmlStatement.getSql(), values, currentDmlStatement.getTypes());
                 failureMessage.append(dynamicSQL);
                 failureMessage.append("\n");
                 shouldLogRawSql = !dynamicSQL.equals(currentDmlStatement.getSql());
@@ -945,10 +951,10 @@ public class DefaultDatabaseWriter extends AbstractDatabaseWriter {
             }
             failureMessage.append("\n");
         }
-        if (logLastDmlDetails && currentDmlValues != null && currentDmlStatement != null) {
+        if (logLastDmlDetails && values != null && currentDmlStatement != null) {
             if (writerSettings.isLogSqlParamsOnError()) {
                 failureMessage.append("Failed sql parameters: ");
-                failureMessage.append(StringUtils.abbreviate("[" + dmlValuesToString(currentDmlValues, currentDmlStatement.getTypes()) + "]",
+                failureMessage.append(StringUtils.abbreviate("[" + dmlValuesToString(values, currentDmlStatement.getTypes()) + "]",
                         CsvData.MAX_DATA_SIZE_TO_PRINT_TO_LOG));
                 failureMessage.append("\n");
             }
