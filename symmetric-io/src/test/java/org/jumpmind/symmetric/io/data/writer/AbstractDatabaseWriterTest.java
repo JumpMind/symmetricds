@@ -280,5 +280,11 @@ public class AbstractDatabaseWriterTest {
          protected void logFailureDetails(Throwable e, CsvData data, boolean logLastDmlDetails) {
              // Auto-generated method stub for AbstractDatabaseWriter
          }
+
+		@Override
+		protected void logFailureDetails(Throwable e, CsvData data, boolean logLastDmlDetails, Object[] values) {
+			// TODO Auto-generated method stub
+			
+		}
      }
 }
