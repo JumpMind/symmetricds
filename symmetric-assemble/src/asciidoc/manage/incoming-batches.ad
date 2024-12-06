@@ -101,3 +101,10 @@ batches are processed.  The first column, `resolve_data` if filled in will be us
 The second column, `resolve_ignore` if set will cause this particular data item to be ignored and batch processing to continue.  This is the same
 two columns used when a manual conflict resolution strategy is chosen, as discussed in <<Conflicts>>.
       
+ifdef::pro[]
+
+When editing the values for each field in the row on the resolve data tab, if the field is completely empty, then the value that will be saved for this field will be an empty string. If the field is populated with $(null), then a null value will be saved.
+
+When the editing screen comes up with the values, any fields that currently have a null value in it will populate with $(null) automatically.
+
+endif::pro[]

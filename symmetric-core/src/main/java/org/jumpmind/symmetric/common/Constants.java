@@ -35,6 +35,7 @@ final public class Constants {
     public static final long VIRTUAL_BATCH_FOR_REGISTRATION = IoConstants.IGNORE_TABLES_BATCH;
     public static final long BATCH_ID_MISSING = -1;
     public static final String NONE_TOKEN = "$(none)";
+    public static final String NULL_TOKEN = "$(null)";
     public static final String DATA_CONTEXT_ENGINE = "engine";
     public static final String DATA_CONTEXT_TARGET_NODE = "targetNode";
     public static final String DATA_CONTEXT_TARGET_NODE_ID = "targetNodeId";
