@@ -452,10 +452,12 @@ public abstract class AbstractJdbcDdlReader implements IDdlReader {
      * 
      * @return The database model
      */
+    @Override
     public Database readTables(final String catalog, final String schema, final String[] tableTypes) {
         JdbcSqlTemplate sqlTemplate = (JdbcSqlTemplate) platform.getSqlTemplateDirty();
         return postprocessModelFromDatabase(sqlTemplate
                 .execute(new IConnectionCallback<Database>() {
+                    @Override
                     public Database execute(Connection connection) throws SQLException {
                         Database db = new Database();
                         db.setName(Table.getFullyQualifiedTablePrefix(catalog, schema));
@@ -515,6 +517,7 @@ public abstract class AbstractJdbcDdlReader implements IDdlReader {
             }
             final Collator collator = Collator.getInstance();
             Collections.sort(tables, new Comparator<Table>() {
+                @Override
                 public int compare(Table obj1, Table obj2) {
                     return collator.compare(obj1.getName().toUpperCase(), obj2.getName()
                             .toUpperCase());
@@ -533,6 +536,7 @@ public abstract class AbstractJdbcDdlReader implements IDdlReader {
         try {
             JdbcSqlTemplate sqlTemplate = (JdbcSqlTemplate) platform.getSqlTemplateDirty();
             return postprocessTableFromDatabase(sqlTemplate.execute(new IConnectionCallback<Table>() {
+                @Override
                 public Table execute(Connection connection) throws SQLException {
                     return readTableFromConnection(connection, catalog, schema, table);
                 }
@@ -554,6 +558,7 @@ public abstract class AbstractJdbcDdlReader implements IDdlReader {
             log.debug("reading table {}", table);
             if (transaction instanceof JdbcSqlTransaction) {
                 return postprocessTableFromDatabase(((JdbcSqlTransaction) transaction).executeCallback(new IConnectionCallback<Table>() {
+                    @Override
                     public Table execute(Connection connection) throws SQLException {
                         return readTableFromConnection(connection, catalog, schema, table);
                     }
@@ -948,7 +953,7 @@ public abstract class AbstractJdbcDdlReader implements IDdlReader {
             log.warn("", ex);
         }
         if (columnSize == null) {
-            columnSize = (String) _defaultSizes.get(Integer.valueOf(column.getMappedTypeCode()));
+            columnSize = _defaultSizes.get(Integer.valueOf(column.getMappedTypeCode()));
         }
         // we're setting the size after the precision and radix in case
         // the database prefers to return them in the size value
@@ -1082,7 +1087,7 @@ public abstract class AbstractJdbcDdlReader implements IDdlReader {
     protected void readForeignKey(DatabaseMetaDataWrapper metaData, Map<String, Object> values,
             Map<String, ForeignKey> knownFks) throws SQLException {
         String fkName = (String) values.get(getName("FK_NAME"));
-        ForeignKey fk = (ForeignKey) knownFks.get(fkName);
+        ForeignKey fk = knownFks.get(fkName);
         if (fk == null) {
             fk = new ForeignKey(fkName);
             fk.setForeignTableName((String) values.get(getName("PKTABLE_NAME")));
@@ -1159,7 +1164,7 @@ public abstract class AbstractJdbcDdlReader implements IDdlReader {
     protected void readExportedKey(DatabaseMetaDataWrapper metaData, Map<String, Object> values,
             Map<String, ForeignKey> knownFks) throws SQLException {
         String fkName = (String) values.get(getName("FK_NAME"));
-        ForeignKey fk = (ForeignKey) knownFks.get(fkName);
+        ForeignKey fk = knownFks.get(fkName);
         if (fk == null) {
             fk = new ForeignKey(fkName);
             fk.setForeignTableName((String) values.get(getName("FKTABLE_NAME")));
@@ -1227,7 +1232,7 @@ public abstract class AbstractJdbcDdlReader implements IDdlReader {
         }
         String indexName = (String) values.get(getName("INDEX_NAME"));
         if (indexName != null) {
-            IIndex index = (IIndex) knownIndices.get(indexName);
+            IIndex index = knownIndices.get(indexName);
             if (index == null) {
                 if (((Boolean) values.get(getName("NON_UNIQUE"))).booleanValue()) {
                     index = new NonUniqueIndex();
@@ -1337,12 +1342,12 @@ public abstract class AbstractJdbcDdlReader implements IDdlReader {
             appendIdentifier(query, table.getName()).append(" t " + getWithNoLockHint() + " WHERE 1 = 0");
             Statement stmt = null;
             try {
-                stmt = conn.createStatement();
                 if (log.isDebugEnabled()) {
                     log.debug(
                             "Running the following query to get metadata about whether a column is an auto increment column: \n{}",
                             query);
                 }
+                stmt = conn.createStatement();
                 ResultSet rs = null;
                 try {
                     rs = stmt.executeQuery(query.toString());
@@ -1430,9 +1435,11 @@ public abstract class AbstractJdbcDdlReader implements IDdlReader {
         return text;
     }
 
+    @Override
     public List<String> getTableTypes() {
         JdbcSqlTemplate sqlTemplate = (JdbcSqlTemplate) platform.getSqlTemplateDirty();
         return sqlTemplate.execute(new IConnectionCallback<List<String>>() {
+            @Override
             public List<String> execute(Connection connection) throws SQLException {
                 ArrayList<String> types = new ArrayList<String>();
                 DatabaseMetaData meta = connection.getMetaData();
@@ -1450,9 +1457,11 @@ public abstract class AbstractJdbcDdlReader implements IDdlReader {
         });
     }
 
+    @Override
     public List<String> getCatalogNames() {
         JdbcSqlTemplate sqlTemplate = (JdbcSqlTemplate) platform.getSqlTemplateDirty();
         return sqlTemplate.execute(new IConnectionCallback<List<String>>() {
+            @Override
             public List<String> execute(Connection connection) throws SQLException {
                 ArrayList<String> catalogs = new ArrayList<String>();
                 DatabaseMetaData meta = connection.getMetaData();
@@ -1473,9 +1482,11 @@ public abstract class AbstractJdbcDdlReader implements IDdlReader {
         });
     }
 
+    @Override
     public List<String> getSchemaNames(final String catalog) {
         JdbcSqlTemplate sqlTemplate = (JdbcSqlTemplate) platform.getSqlTemplateDirty();
         return sqlTemplate.execute(new IConnectionCallback<List<String>>() {
+            @Override
             public List<String> execute(Connection connection) throws SQLException {
                 IConnectionHandler connectionHandler = getConnectionHandler(catalog);
                 if (connectionHandler != null) {
@@ -1530,10 +1541,12 @@ public abstract class AbstractJdbcDdlReader implements IDdlReader {
         return null;
     }
 
+    @Override
     public List<String> getTableNames(final String catalog, final String schema,
             final String[] tableTypes) {
         JdbcSqlTemplate sqlTemplate = (JdbcSqlTemplate) platform.getSqlTemplateDirty();
         List<String> list = sqlTemplate.execute(new IConnectionCallback<List<String>>() {
+            @Override
             public List<String> execute(Connection connection) throws SQLException {
                 ArrayList<String> list = new ArrayList<String>();
                 DatabaseMetaData meta = connection.getMetaData();
@@ -1556,9 +1569,11 @@ public abstract class AbstractJdbcDdlReader implements IDdlReader {
         return list;
     }
 
+    @Override
     public List<String> getColumnNames(final String catalog, final String schema, final String tableName) {
         JdbcSqlTemplate sqlTemplate = (JdbcSqlTemplate) platform.getSqlTemplateDirty();
         return sqlTemplate.execute(new IConnectionCallback<List<String>>() {
+            @Override
             public List<String> execute(Connection connection) throws SQLException {
                 ArrayList<String> list = new ArrayList<String>();
                 DatabaseMetaData meta = connection.getMetaData();
@@ -1581,6 +1596,7 @@ public abstract class AbstractJdbcDdlReader implements IDdlReader {
         return new ArrayList<String>();
     }
 
+    @Override
     public Trigger getTriggerFor(Table table, String triggerName) {
         Trigger trigger = null;
         List<Trigger> triggers = getTriggers(table.getCatalog(), table.getSchema(), table.getName());
@@ -1598,6 +1614,7 @@ public abstract class AbstractJdbcDdlReader implements IDdlReader {
         try {
             JdbcSqlTemplate sqlTemplate = (JdbcSqlTemplate) platform.getSqlTemplateDirty();
             return sqlTemplate.execute(new IConnectionCallback<Collection<ForeignKey>>() {
+                @Override
                 public Collection<ForeignKey> execute(Connection connection) throws SQLException {
                     DatabaseMetaDataWrapper metaData = new DatabaseMetaDataWrapper();
                     metaData.setMetaData(connection.getMetaData());

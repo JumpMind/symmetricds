@@ -91,16 +91,21 @@ public class MsSqlDdlReader extends AbstractJdbcDdlReader {
     private Pattern isoDatePattern = Pattern.compile("'(\\d{4}\\-\\d{2}\\-\\d{2})'");
     /* The regular expression pattern for the ISO times. */
     private Pattern isoTimePattern = Pattern.compile("'(\\d{2}:\\d{2}:\\d{2})'");
-    private Set<String> userDefinedDataTypes = new HashSet<String>();
+    protected Set<String> userDefinedDataTypes = new HashSet<String>();
 
     public MsSqlDdlReader(IDatabasePlatform platform) {
         super(platform);
         setDefaultCatalogPattern(null);
         setDefaultSchemaPattern(null);
         setDefaultTablePattern("%");
-        fetchSysAndUserDefinedTypes();
+        this.fetchSysAndUserDefinedTypes();
     }
 
+    /***
+     * MS SQL Server (or Azure SQL Database) allows users to define data types (UDT), which impose additional constraints (rules and default values) on data for
+     * consistency across entire database (or multiple databases). Note: UDTs are not specified in SQL ISO and are not compatible with with database engines
+     * other than Microsoft SQL Server. See also: https://www.selectdistinct.co.uk/2024/03/06/explaining-user-defined-types-in-sql-server/
+     */
     protected void fetchSysAndUserDefinedTypes() {
         JdbcSqlTemplate sqlTemplate = (JdbcSqlTemplate) platform.getSqlTemplateDirty();
         if (sqlTemplate.getDatabaseMajorVersion() >= 9) {
