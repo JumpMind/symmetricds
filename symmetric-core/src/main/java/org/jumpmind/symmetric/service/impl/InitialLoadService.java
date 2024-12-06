@@ -30,7 +30,7 @@ import java.util.ListIterator;
 import java.util.Map;
 import java.util.Set;
 
-import org.apache.commons.codec.binary.StringUtils;
+import org.apache.commons.lang3.StringUtils;
 import org.jumpmind.symmetric.ISymmetricEngine;
 import org.jumpmind.symmetric.SymmetricException;
 import org.jumpmind.symmetric.common.Constants;
@@ -150,6 +150,30 @@ public class InitialLoadService extends AbstractService implements IInitialLoadS
         }
     }
 
+    @Override
+    public void cancelAllLoadsForTarget(String targetNodeId) {
+        int requestCount = 0;
+        List<TableReloadRequest> requests = engine.getDataService().getTableReloadRequestToProcessByTarget(targetNodeId);
+        for (TableReloadRequest request : requests) {
+            if (StringUtils.isBlank(request.getReloadSelect())) {
+                engine.getDataService().cancelTableReloadRequest(request);
+                requestCount++;
+            }
+        }
+        if (requestCount > 0) {
+            log.info("Cancelled {} outstanding load requests for target node {}", requestCount, targetNodeId);
+        }
+        List<TableReloadStatus> statuses = engine.getDataService().getTableReloadStatusByTarget(targetNodeId);
+        for (TableReloadStatus status : statuses) {
+            if (!status.isCompleted() && !status.isCancelled()) {
+                TableReloadRequest request = engine.getDataService().getTableReloadRequest(status.getLoadId());
+                if (StringUtils.isBlank(request.getReloadSelect())) {
+                    cancelLoad(status);
+                }
+            }
+        }
+    }
+
     /**
      * If a load has been queued up by setting the initial load enabled or reverse initial load enabled flags, then the router service will insert the reload
      * events. This process will not run at the same time sync triggers is running.
@@ -188,6 +212,7 @@ public class InitialLoadService extends AbstractService implements IInitialLoadS
                                     request.setCreateTable(parameterService.is(ParameterConstants.INITIAL_LOAD_CREATE_SCHEMA_BEFORE_RELOAD));
                                     request.setDeleteFirst(parameterService.is(ParameterConstants.INITIAL_LOAD_DELETE_BEFORE_RELOAD));
                                     request.setCreateTime(new Date());
+                                    cancelAllLoadsForTarget(security.getNodeId());
                                     log.info("Creating load request from node " + security.getNodeId() + " to node " + identity.getNodeId());
                                     engine.getDataService().insertTableReloadRequest(request);
                                     processInfo.incrementCurrentDataCount();

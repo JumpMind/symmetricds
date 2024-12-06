@@ -26,4 +26,6 @@ public interface IInitialLoadService {
     public void queueLoads(boolean force);
 
     public void cancelLoad(TableReloadStatus status);
+
+    public void cancelAllLoadsForTarget(String targetNodeId);
 }
