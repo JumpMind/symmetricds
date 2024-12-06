@@ -910,8 +910,10 @@ public class DataService extends AbstractService implements IDataService {
                     if (loadId != 0) {
                         // Cancel the load
                         TableReloadStatus status = new TableReloadStatus();
+                        status.setSourceNodeId(engine.getNodeId());
                         status.setTargetNodeId(targetNode.getNodeId());
                         status.setLoadId((int) loadId);
+                        status.setFullLoad(reloadRequests.get(0).isFullLoadRequest());
                         engine.getInitialLoadService().cancelLoad(status);
                         // Get original table reload request
                         TableReloadRequest tableReloadRequest = reloadRequests.get(0);
