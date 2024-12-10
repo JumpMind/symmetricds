@@ -82,8 +82,6 @@ public class TableConstants {
     public static final String SYM_CONSOLE_USER_HIST = "console_user_hist";
     public static final String SYM_CONSOLE_EVENT = "console_event";
     public static final String SYM_CONSOLE_TABLE_STATS = "console_table_stats";
-    public static final String SYM_DESIGN_DIAGRAM = "design_diagram";
-    public static final String SYM_DIAGRAM_GROUP = "diagram_group";
     public static final String SYM_EXTENSION = "extension";
     public static final String SYM_MONITOR = "monitor";
     public static final String SYM_MONITOR_EVENT = "monitor_event";
@@ -122,7 +120,7 @@ public class TableConstants {
     public static final Set<String> getTablesForConsole(String tablePrefix) {
         Set<String> tables = new HashSet<String>();
         addPrefixToTableNames(tables, tablePrefix, SYM_CONSOLE_EVENT, SYM_CONSOLE_USER, SYM_CONSOLE_USER_HIST, SYM_CONSOLE_ROLE,
-                SYM_CONSOLE_ROLE_PRIVILEGE, SYM_CONSOLE_TABLE_STATS, SYM_DESIGN_DIAGRAM, SYM_DIAGRAM_GROUP, SYM_TABLE_GROUP, SYM_TABLE_GROUP_HIER,
+                SYM_CONSOLE_ROLE_PRIVILEGE, SYM_CONSOLE_TABLE_STATS, SYM_TABLE_GROUP, SYM_TABLE_GROUP_HIER,
                 SYM_COMPARE_REQUEST, SYM_COMPARE_STATUS, SYM_COMPARE_TABLE_STATUS, SYM_MONITOR, SYM_MONITOR_EVENT, SYM_NOTIFICATION);
         return tables;
     }
@@ -145,8 +143,8 @@ public class TableConstants {
                 SYM_EXTRACT_REQUEST, SYM_INCOMING_ERROR, SYM_OUTGOING_ERROR);
         if (hasConsoleSchema) {
             addPrefixToTableNames(tables, tablePrefix, SYM_CONSOLE_ROLE, SYM_CONSOLE_USER, SYM_CONSOLE_ROLE_PRIVILEGE, SYM_CONSOLE_USER_HIST,
-                    SYM_DESIGN_DIAGRAM, SYM_DIAGRAM_GROUP, SYM_TABLE_GROUP, SYM_TABLE_GROUP_HIER, SYM_COMPARE_REQUEST,
-                    SYM_COMPARE_STATUS, SYM_COMPARE_TABLE_STATUS, SYM_MONITOR, SYM_MONITOR_EVENT, SYM_NOTIFICATION);
+                    SYM_TABLE_GROUP, SYM_TABLE_GROUP_HIER, SYM_COMPARE_REQUEST, SYM_COMPARE_STATUS, SYM_COMPARE_TABLE_STATUS,
+                    SYM_MONITOR, SYM_MONITOR_EVENT, SYM_NOTIFICATION);
         }
         return tables;
     }
@@ -162,7 +160,7 @@ public class TableConstants {
         addPrefixToTableNames(map, tablePrefix, "3.8.0", SYM_NOTIFICATION, SYM_MONITOR, SYM_MONITOR_EVENT, SYM_CONSOLE_EVENT);
         addPrefixToTableNames(map, tablePrefix, "3.8.18", SYM_CONSOLE_USER_HIST);
         addPrefixToTableNames(map, tablePrefix, "3.9.0", SYM_JOB);
-        addPrefixToTableNames(map, tablePrefix, "3.12.0", SYM_CONSOLE_ROLE, SYM_CONSOLE_ROLE_PRIVILEGE, SYM_DESIGN_DIAGRAM, SYM_DIAGRAM_GROUP);
+        addPrefixToTableNames(map, tablePrefix, "3.12.0", SYM_CONSOLE_ROLE, SYM_CONSOLE_ROLE_PRIVILEGE);
         addPrefixToTableNames(map, tablePrefix, "3.14.0", SYM_TABLE_RELOAD_STATUS, SYM_EXTRACT_REQUEST, SYM_TABLE_GROUP, SYM_TABLE_GROUP_HIER);
         addPrefixToTableNames(map, tablePrefix, "3.15.0", SYM_OUTGOING_ERROR, SYM_INCOMING_ERROR, SYM_COMPARE_REQUEST, SYM_COMPARE_STATUS,
                 SYM_COMPARE_TABLE_STATUS);
