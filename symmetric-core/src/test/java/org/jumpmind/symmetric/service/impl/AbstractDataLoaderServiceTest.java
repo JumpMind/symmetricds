@@ -702,7 +702,7 @@ abstract public class AbstractDataLoaderServiceTest extends AbstractServiceTest 
 
     protected String translateExpectedDate(String value) {
         IDatabasePlatform platform = engine.getDatabasePlatform();
-        if (value != null && (!(platform instanceof OracleDatabasePlatform 
+        if (value != null && (!(platform instanceof OracleDatabasePlatform
                 || ((platform instanceof MsSql2000DatabasePlatform || platform instanceof MsSql2005DatabasePlatform)
                         && !(platform instanceof MsSql2008DatabasePlatform || platform instanceof MsSql2016DatabasePlatform))
                 || platform instanceof AseDatabasePlatform || platform instanceof SqlAnywhereDatabasePlatform))) {

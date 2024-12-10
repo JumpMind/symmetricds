@@ -156,8 +156,8 @@ public class PostgreSqlDdlReader extends AbstractJdbcDdlReader {
             JdbcSqlTemplate.close(ps);
         }
         long durationInMillis = System.currentTimeMillis() - startTime;
-        log.debug(String.format("readMetaDataAndPrimaryKeyConstraint - Done. Table=%s; Logging=%b; Duration=%d ms", table.getName(), table.getLogging()
-                , durationInMillis));
+        log.debug(String.format("readMetaDataAndPrimaryKeyConstraint - Done. Table=%s; Logging=%b; Duration=%d ms", table.getName(), table.getLogging(),
+                durationInMillis));
     }
 
     @Override

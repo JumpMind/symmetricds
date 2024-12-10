@@ -46,7 +46,6 @@ public class DatabaseXmlTest {
         String repositoryMarker = "/symmetric-ds/";
         String symmetricSchemaXmlPath = "";
         String symmetricDtdPath = "";
-
         try {
             String currentDirectory = Paths.get("").toAbsolutePath().toString();
             String[] paths = currentDirectory.split(repositoryMarker);
@@ -73,7 +72,6 @@ public class DatabaseXmlTest {
                     }
                 }
             });
-
             Document doc = builder.parse(symmetricSchemaXmlFile);
             assertNotNull(doc);
             // System.out.println("testSymmetricSchemaIsValidAgainstDtd - XML is valid against the DTD. Path=" + absolutePath);

@@ -219,9 +219,10 @@ public class DatabaseXmlUtil {
                                     table.setName(attributeValue);
                                 } else if (attributeName.equalsIgnoreCase("description")) {
                                     table.setDescription(attributeValue);
-                                } if (attributeName.equalsIgnoreCase("logging")) {
+                                }
+                                if (attributeName.equalsIgnoreCase("logging")) {
                                     boolean logging = !("false".equalsIgnoreCase(attributeValue));
-                                     table.setLogging(logging); 
+                                    table.setLogging(logging);
                                 } else if (attributeName.equalsIgnoreCase("compression")) {
                                     if (CompressionTypes.PAGE.name().equalsIgnoreCase(attributeValue)) {
                                         table.setCompressionType(CompressionTypes.PAGE);
@@ -298,7 +299,7 @@ public class DatabaseXmlUtil {
                                         platformColumn.setEnumValues(attributeValue.split(","));
                                     }
                                 } else if (attributeName.equalsIgnoreCase("userDefinedType")) {
-                                	platformColumn.setUserDefinedType(Boolean.parseBoolean(attributeValue));
+                                    platformColumn.setUserDefinedType(Boolean.parseBoolean(attributeValue));
                                 }
                             }
                             if (table != null && table.getColumnCount() > 0) {
@@ -613,7 +614,7 @@ public class DatabaseXmlUtil {
                             output.write("\"");
                         }
                         if (platformColumn.isUserDefinedType()) {
-                        	output.write(" userDefinedType=\"" + platformColumn.isUserDefinedType() + "\"");
+                            output.write(" userDefinedType=\"" + platformColumn.isUserDefinedType() + "\"");
                         }
                         output.write("/>\n");
                     }

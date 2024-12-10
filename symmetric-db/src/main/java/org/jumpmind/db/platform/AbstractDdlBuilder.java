@@ -393,8 +393,8 @@ public abstract class AbstractDdlBuilder implements IDdlBuilder {
             StringBuilder ddl) {
         // 1st pass: removing external constraints and indices
         processChanges(currentModel, desiredModel, changes, ddl, new Class<?>[] { RemoveForeignKeyChange.class, RemoveIndexChange.class,
-            RemoveTableLoggingChange.class });
-    // 2nd pass: removing tables
+                RemoveTableLoggingChange.class });
+        // 2nd pass: removing tables
         processChanges(currentModel, desiredModel, changes, ddl, new Class<?>[] { RemoveTableChange.class });
         // 3rd pass: changing the structure of tables
         Predicate<IModelChange> predicate = new MultiInstanceofPredicate(new Class<?>[] { RemovePrimaryKeyChange.class,
@@ -407,8 +407,8 @@ public abstract class AbstractDdlBuilder implements IDdlBuilder {
         processChanges(currentModel, desiredModel, changes, ddl, new Class<?>[] { AddTableChange.class });
         // 5th pass: adding external constraints and indices
         processChanges(currentModel, desiredModel, changes, ddl, new Class<?>[] { AddForeignKeyChange.class, AddIndexChange.class,
-            AddTableLoggingChange.class });
-}
+                AddTableLoggingChange.class });
+    }
 
     protected void processChanges(Database currentModel, Database desiredModel, List<IModelChange> changes,
             StringBuilder ddl, Class<?>[] changeTypes) {

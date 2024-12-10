@@ -319,7 +319,8 @@ public class SelectFromTableSource extends SelectFromSource {
                                 options.getExpectedCommaCount(), commaCount, csvRow, options.getInitialLoadSql());
                     }
                 } else if (options.isObjectValuesWillNeedEscaped()) {
-                    csvRow = platform.getCsvStringValue(symmetricDialect.getBinaryEncoding(), sourceTable.getColumns(), row, options.isColumnPositionUsingTemplate());
+                    csvRow = platform.getCsvStringValue(symmetricDialect.getBinaryEncoding(), sourceTable.getColumns(), row, options
+                            .isColumnPositionUsingTemplate());
                 } else {
                     csvRow = row.csvValue();
                 }

@@ -55,7 +55,7 @@ public class TableColumnSourceReferences extends ArrayList<TableColumnSourceRefe
         for (int targetColumnNo = 0; targetColumnNo < targetColumns.length; targetColumnNo++) {
             Column targetColumn = targetColumns[targetColumnNo];
             ColumnSourceReferenceEntry columnReference = this.get(targetColumnNo);
-            if( !targetColumn.getName().equals(columnReference.targetColumn.getName()) || targetColumnNo != columnReference.targetColumnNo) {
+            if (!targetColumn.getName().equals(columnReference.targetColumn.getName()) || targetColumnNo != columnReference.targetColumnNo) {
                 return false;
             }
             if (columnReference.sourceColumnNo >= sourceColumns.length
@@ -65,10 +65,10 @@ public class TableColumnSourceReferences extends ArrayList<TableColumnSourceRefe
         }
         return true;
     }
-    
+
     /***
      * Internal class for column mappings to move data efficiently. Column numbers are used to copy data from source to target.
      */
     public record ColumnSourceReferenceEntry(int sourceColumnNo, int targetColumnNo, Column sourceColumn, Column targetColumn) {
-    }   
+    }
 }

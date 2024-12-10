@@ -562,7 +562,6 @@ public class DatabaseWriterTest extends AbstractWriterTest {
             values[5] = values[5].replaceFirst(" \\d\\d:\\d\\d:\\d\\d\\.000", "");
         } else if (values[5] != null
                 && (!(platform instanceof OracleDatabasePlatform
-
                         ||
                         // Only SqlServer 2000 and 2005 should not be mangled. 2008 now uses Date and Time data types.
                         ((platform instanceof MsSql2000DatabasePlatform || platform instanceof MsSql2005DatabasePlatform)
@@ -570,8 +569,7 @@ public class DatabaseWriterTest extends AbstractWriterTest {
                         || platform instanceof AseDatabasePlatform
                         || platform instanceof SqlAnywhereDatabasePlatform))) {
             values[5] = values[5].replaceFirst(" \\d\\d:\\d\\d:\\d\\d.*", "");
-        } else if (values[5] != null && values[5].length() == 23 && (platform instanceof OracleDatabasePlatform
-        )) {
+        } else if (values[5] != null && values[5].length() == 23 && (platform instanceof OracleDatabasePlatform)) {
             values[5] = values[5] + "0000";
         }
         if (values[6] != null && values[6].length() == 23) {

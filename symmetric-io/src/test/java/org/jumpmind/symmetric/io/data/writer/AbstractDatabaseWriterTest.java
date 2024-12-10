@@ -60,11 +60,11 @@ public class AbstractDatabaseWriterTest {
 
     @Test
     public void testGenerateTableColumnSourceReferences_KeyMatch() {
-        String[] columnNames = {"c1","c2","c3","c4","c5"};
-        String[] keyNames = {"c1","c2" };
+        String[] columnNames = { "c1", "c2", "c3", "c4", "c5" };
+        String[] keyNames = { "c1", "c2" };
         Table sourceTable = new Table("catalog1", "schema1", "table1", columnNames, keyNames);
         Table targetTable = new Table("catalog2", "schema2", "table2", columnNames, keyNames);
-        String expectedKey = sourceTable.getFullyQualifiedTableName() + targetTable.getFullyQualifiedTableName(); 
+        String expectedKey = sourceTable.getFullyQualifiedTableName() + targetTable.getFullyQualifiedTableName();
         String key = TableColumnSourceReferences.generateSearchKey(sourceTable, targetTable);
         assertEquals(expectedKey, key);
     }
@@ -128,163 +128,161 @@ public class AbstractDatabaseWriterTest {
      */
     @Test
     public void testGetRowData_LotsOfRandomAndFewSkippedColumns() {
-         int sourceColumnCount = 20;
-         int skipColumnCount = 5;
-         int targetColumnCount = sourceColumnCount - skipColumnCount;
-         int maxRows = 500000;
-         String[] sourceColumnNames = new String[sourceColumnCount];
-         String[] targetColumnNames = new String[targetColumnCount];
-         String[] sourceRowData = new String[sourceColumnCount];
-         String[] expectedRowData = new String[targetColumnCount];
-         Random randomSourceColumn = new Random();
-         HashSet<Integer> randomSourceColumnSet = new HashSet<Integer>(targetColumnCount);
-         for (int columnNo = 0; columnNo < sourceColumnCount; columnNo++) {
-             sourceColumnNames[columnNo] = String.format("column%d", columnNo);
-             sourceRowData[columnNo] = String.format("value%d", columnNo);
-             if (columnNo < targetColumnCount) {
-                 // Randomly assign source column
-                 int randomSourceColumnNo = randomSourceColumn.nextInt(sourceColumnCount);
-                 while (randomSourceColumnSet.contains(randomSourceColumnNo)) {
-                     randomSourceColumnNo = randomSourceColumn.nextInt(sourceColumnCount);
-                 }
-                 randomSourceColumnSet.add(randomSourceColumnNo);
-                 targetColumnNames[columnNo] = String.format("column%d", randomSourceColumnNo);
-                 expectedRowData[columnNo] = String.format("value%d", randomSourceColumnNo);
-             }
-         }
-         String[] keyNames = { "column1", "column2" };
-         Table sourceTable = new Table("catalog1", "schema1", "table1", sourceColumnNames, keyNames);
-         setTableColumnTypes(sourceTable);
-         Table targetTable = new Table("catalog2", "schema2", "table2", targetColumnNames, keyNames);
-         setTableColumnTypes(targetTable);
-         CsvData csvData = new CsvData(DataEventType.INSERT, sourceRowData);
-         StubAbstractDatabaseWriter abstractDatabaseWriter = new StubAbstractDatabaseWriter();
-         abstractDatabaseWriter.start(sourceTable, targetTable);
-         String[] rowData = null;
-         long startTime = System.currentTimeMillis();
-         for (int rowNo = 0; rowNo < maxRows; rowNo++) {
-             rowData = abstractDatabaseWriter.getRowDataNew(csvData, CsvData.ROW_DATA);
-             // rowData = abstractDatabaseWriter.getRowDataOld(csvData, CsvData.ROW_DATA);
-         }
-         assertNotNull(rowData);
-         assertEquals(targetColumnNames.length, rowData.length);
-         assertArrayEquals(expectedRowData, rowData);
-         // System.out.println("testGetRowData_LotsOfRandomAndFewSkippedColumns done; Runtime ms=" + (System.currentTimeMillis()
-         // - startTime));
-         abstractDatabaseWriter.close();
-     }
+        int sourceColumnCount = 20;
+        int skipColumnCount = 5;
+        int targetColumnCount = sourceColumnCount - skipColumnCount;
+        int maxRows = 500000;
+        String[] sourceColumnNames = new String[sourceColumnCount];
+        String[] targetColumnNames = new String[targetColumnCount];
+        String[] sourceRowData = new String[sourceColumnCount];
+        String[] expectedRowData = new String[targetColumnCount];
+        Random randomSourceColumn = new Random();
+        HashSet<Integer> randomSourceColumnSet = new HashSet<Integer>(targetColumnCount);
+        for (int columnNo = 0; columnNo < sourceColumnCount; columnNo++) {
+            sourceColumnNames[columnNo] = String.format("column%d", columnNo);
+            sourceRowData[columnNo] = String.format("value%d", columnNo);
+            if (columnNo < targetColumnCount) {
+                // Randomly assign source column
+                int randomSourceColumnNo = randomSourceColumn.nextInt(sourceColumnCount);
+                while (randomSourceColumnSet.contains(randomSourceColumnNo)) {
+                    randomSourceColumnNo = randomSourceColumn.nextInt(sourceColumnCount);
+                }
+                randomSourceColumnSet.add(randomSourceColumnNo);
+                targetColumnNames[columnNo] = String.format("column%d", randomSourceColumnNo);
+                expectedRowData[columnNo] = String.format("value%d", randomSourceColumnNo);
+            }
+        }
+        String[] keyNames = { "column1", "column2" };
+        Table sourceTable = new Table("catalog1", "schema1", "table1", sourceColumnNames, keyNames);
+        setTableColumnTypes(sourceTable);
+        Table targetTable = new Table("catalog2", "schema2", "table2", targetColumnNames, keyNames);
+        setTableColumnTypes(targetTable);
+        CsvData csvData = new CsvData(DataEventType.INSERT, sourceRowData);
+        StubAbstractDatabaseWriter abstractDatabaseWriter = new StubAbstractDatabaseWriter();
+        abstractDatabaseWriter.start(sourceTable, targetTable);
+        String[] rowData = null;
+        long startTime = System.currentTimeMillis();
+        for (int rowNo = 0; rowNo < maxRows; rowNo++) {
+            rowData = abstractDatabaseWriter.getRowDataNew(csvData, CsvData.ROW_DATA);
+            // rowData = abstractDatabaseWriter.getRowDataOld(csvData, CsvData.ROW_DATA);
+        }
+        assertNotNull(rowData);
+        assertEquals(targetColumnNames.length, rowData.length);
+        assertArrayEquals(expectedRowData, rowData);
+        // System.out.println("testGetRowData_LotsOfRandomAndFewSkippedColumns done; Runtime ms=" + (System.currentTimeMillis()
+        // - startTime));
+        abstractDatabaseWriter.close();
+    }
 
-     @Test
-     public void testClearTargetColumnReferencesMap() {
-         String[] sourceColumnNames = { "c1", "c2", "c3", "c4", "c5" };
-         String[] targetColumnNames = { "c2", "c5", "c3", "c1" };
-         String[] keyNames = { "c1", "c2" };
-         Table sourceTable = new Table("catalog1", "schema1", "table1", sourceColumnNames, keyNames);
-         setTableColumnTypes(sourceTable);
-         Table targetTable = new Table("catalog2", "schema2", "table2", targetColumnNames, keyNames);
-         setTableColumnTypes(targetTable);
-         StubAbstractDatabaseWriter abstractDatabaseWriter = new StubAbstractDatabaseWriter();
-         assertEquals(0, abstractDatabaseWriter.getTargetColumnReferencesMapSize());
-         abstractDatabaseWriter.start(sourceTable, targetTable);
-         assertEquals(1, abstractDatabaseWriter.getTargetColumnReferencesMapSize());
-         abstractDatabaseWriter.clearTargetColumnReferencesMap();
-         assertEquals(0, abstractDatabaseWriter.getTargetColumnReferencesMapSize());
-         abstractDatabaseWriter.getTargetColumnReferencesMap();
-         assertEquals(1, abstractDatabaseWriter.getTargetColumnReferencesMapSize());
-         abstractDatabaseWriter.clearTargetColumnReferencesMap();
-         assertEquals(0, abstractDatabaseWriter.getTargetColumnReferencesMapSize());
-         abstractDatabaseWriter.refreshTargetColumnReferencesMap();
-         assertEquals(1, abstractDatabaseWriter.getTargetColumnReferencesMapSize());
-     }
+    @Test
+    public void testClearTargetColumnReferencesMap() {
+        String[] sourceColumnNames = { "c1", "c2", "c3", "c4", "c5" };
+        String[] targetColumnNames = { "c2", "c5", "c3", "c1" };
+        String[] keyNames = { "c1", "c2" };
+        Table sourceTable = new Table("catalog1", "schema1", "table1", sourceColumnNames, keyNames);
+        setTableColumnTypes(sourceTable);
+        Table targetTable = new Table("catalog2", "schema2", "table2", targetColumnNames, keyNames);
+        setTableColumnTypes(targetTable);
+        StubAbstractDatabaseWriter abstractDatabaseWriter = new StubAbstractDatabaseWriter();
+        assertEquals(0, abstractDatabaseWriter.getTargetColumnReferencesMapSize());
+        abstractDatabaseWriter.start(sourceTable, targetTable);
+        assertEquals(1, abstractDatabaseWriter.getTargetColumnReferencesMapSize());
+        abstractDatabaseWriter.clearTargetColumnReferencesMap();
+        assertEquals(0, abstractDatabaseWriter.getTargetColumnReferencesMapSize());
+        abstractDatabaseWriter.getTargetColumnReferencesMap();
+        assertEquals(1, abstractDatabaseWriter.getTargetColumnReferencesMapSize());
+        abstractDatabaseWriter.clearTargetColumnReferencesMap();
+        assertEquals(0, abstractDatabaseWriter.getTargetColumnReferencesMapSize());
+        abstractDatabaseWriter.refreshTargetColumnReferencesMap();
+        assertEquals(1, abstractDatabaseWriter.getTargetColumnReferencesMapSize());
+    }
 
-     /***
-      * Test wrapper class for the AbstractDatabaseWriter class Includes a copy of the older code (getRowDataOld) - before optimization.
-      */
-     protected class StubAbstractDatabaseWriter extends AbstractDatabaseWriter {
-         public StubAbstractDatabaseWriter() {
-             super();
-         }
+    /***
+     * Test wrapper class for the AbstractDatabaseWriter class Includes a copy of the older code (getRowDataOld) - before optimization.
+     */
+    protected class StubAbstractDatabaseWriter extends AbstractDatabaseWriter {
+        public StubAbstractDatabaseWriter() {
+            super();
+        }
 
-         public String[] getRowDataNew(CsvData data, String dataType) {
-             return getRowData(data, dataType);
-         }
+        public String[] getRowDataNew(CsvData data, String dataType) {
+            return getRowData(data, dataType);
+        }
 
-         protected String[] getRowDataOld(CsvData data, String dataType) {
-             String[] targetValues = new String[targetTable.getColumnCount()];
-             String[] targetColumnNames = targetTable.getColumnNames();
-             String[] originalValues = data.getParsedData(dataType);
-             String[] sourceColumnNames = sourceTable.getColumnNames();
-             if (originalValues != null) {
-                 for (int i = 0; i < sourceColumnNames.length && i < originalValues.length; i++) {
-                     for (int t = 0; t < targetColumnNames.length; t++) {
-                         if (sourceColumnNames[i].equalsIgnoreCase(targetColumnNames[t])) {
-                             targetValues[t] = originalValues[i];
-                             break;
-                         }
-                     }
-                 }
-                 return targetValues;
-             } else {
-                 return null;
-             }
-         }
+        protected String[] getRowDataOld(CsvData data, String dataType) {
+            String[] targetValues = new String[targetTable.getColumnCount()];
+            String[] targetColumnNames = targetTable.getColumnNames();
+            String[] originalValues = data.getParsedData(dataType);
+            String[] sourceColumnNames = sourceTable.getColumnNames();
+            if (originalValues != null) {
+                for (int i = 0; i < sourceColumnNames.length && i < originalValues.length; i++) {
+                    for (int t = 0; t < targetColumnNames.length; t++) {
+                        if (sourceColumnNames[i].equalsIgnoreCase(targetColumnNames[t])) {
+                            targetValues[t] = originalValues[i];
+                            break;
+                        }
+                    }
+                }
+                return targetValues;
+            } else {
+                return null;
+            }
+        }
 
-         protected int getTargetColumnReferencesMapSize() {
-             return this.targetColumnSourceReferencesMap.size();
-         }
+        protected int getTargetColumnReferencesMapSize() {
+            return this.targetColumnSourceReferencesMap.size();
+        }
 
+        protected void start(Table sourceTable, Table targetTable) {
+            super.start(sourceTable);
+            clearTargetColumnReferencesMap();
+            this.targetTable = targetTable;
+            refreshTargetColumnReferencesMap();
+        }
 
-         protected void start(Table sourceTable, Table targetTable) {
-             super.start(sourceTable);
-             clearTargetColumnReferencesMap();
-             this.targetTable = targetTable;
-             refreshTargetColumnReferencesMap();
-         }
+        @Override
+        protected Table lookupTableAtTarget(Table table) {
+            return this.targetTable;
+        }
 
-         @Override
-         protected Table lookupTableAtTarget(Table table) {
-             return this.targetTable;
-         }
+        @Override
+        protected LoadStatus insert(CsvData data) {
+            // Auto-generated method stub for AbstractDatabaseWriter
+            return null;
+        }
 
-         @Override
-         protected LoadStatus insert(CsvData data) {
-             // Auto-generated method stub for AbstractDatabaseWriter
-             return null;
-         }
+        @Override
+        protected LoadStatus delete(CsvData data, boolean useConflictDetection) {
+            // Auto-generated method stub for AbstractDatabaseWriter
+            return null;
+        }
 
-         @Override
-         protected LoadStatus delete(CsvData data, boolean useConflictDetection) {
-             // Auto-generated method stub for AbstractDatabaseWriter
-             return null;
-         }
+        @Override
+        protected LoadStatus update(CsvData data, boolean applyChangesOnly, boolean useConflictDetection) {
+            // Auto-generated method stub for AbstractDatabaseWriter
+            return null;
+        }
 
-         @Override
-         protected LoadStatus update(CsvData data, boolean applyChangesOnly, boolean useConflictDetection) {
-             // Auto-generated method stub for AbstractDatabaseWriter
-             return null;
-         }
+        @Override
+        protected boolean create(CsvData data) {
+            // Auto-generated method stub for AbstractDatabaseWriter
+            return false;
+        }
 
-         @Override
-         protected boolean create(CsvData data) {
-             // Auto-generated method stub for AbstractDatabaseWriter
-             return false;
-         }
+        @Override
+        protected boolean sql(CsvData data) {
+            // Auto-generated method stub for AbstractDatabaseWriter
+            return false;
+        }
 
-         @Override
-         protected boolean sql(CsvData data) {
-             // Auto-generated method stub for AbstractDatabaseWriter
-             return false;
-         }
+        @Override
+        protected void logFailureDetails(Throwable e, CsvData data, boolean logLastDmlDetails) {
+            // Auto-generated method stub for AbstractDatabaseWriter
+        }
 
-         @Override
-         protected void logFailureDetails(Throwable e, CsvData data, boolean logLastDmlDetails) {
-             // Auto-generated method stub for AbstractDatabaseWriter
-         }
-
-		@Override
-		protected void logFailureDetails(Throwable e, CsvData data, boolean logLastDmlDetails, Object[] values) {
-			// TODO Auto-generated method stub
-			
-		}
-     }
+        @Override
+        protected void logFailureDetails(Throwable e, CsvData data, boolean logLastDmlDetails, Object[] values) {
+            // TODO Auto-generated method stub
+        }
+    }
 }
