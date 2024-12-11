@@ -295,7 +295,7 @@ public class Table implements Serializable, Cloneable, Comparable<Table> {
      * @return The column at this position
      */
     public Column getColumn(int idx) {
-        return (Column) columns.get(idx);
+        return columns.get(idx);
     }
 
     /**
@@ -304,7 +304,7 @@ public class Table implements Serializable, Cloneable, Comparable<Table> {
      * @return The columns
      */
     public Column[] getColumns() {
-        return (Column[]) columns.toArray(new Column[columns.size()]);
+        return columns.toArray(new Column[columns.size()]);
     }
 
     /**
@@ -371,7 +371,7 @@ public class Table implements Serializable, Cloneable, Comparable<Table> {
      */
     public void addColumns(Collection<Column> columns) {
         for (Iterator<Column> it = columns.iterator(); it.hasNext();) {
-            addColumn((Column) it.next());
+            addColumn(it.next());
         }
     }
 
@@ -441,7 +441,7 @@ public class Table implements Serializable, Cloneable, Comparable<Table> {
      * @return The foreign key
      */
     public ForeignKey getForeignKey(int idx) {
-        return (ForeignKey) foreignKeys.get(idx);
+        return foreignKeys.get(idx);
     }
 
     /**
@@ -450,7 +450,7 @@ public class Table implements Serializable, Cloneable, Comparable<Table> {
      * @return The foreign keys
      */
     public ForeignKey[] getForeignKeys() {
-        return (ForeignKey[]) foreignKeys.toArray(new ForeignKey[foreignKeys.size()]);
+        return foreignKeys.toArray(new ForeignKey[foreignKeys.size()]);
     }
 
     /**
@@ -487,7 +487,7 @@ public class Table implements Serializable, Cloneable, Comparable<Table> {
      */
     public void addForeignKeys(Collection<ForeignKey> foreignKeys) {
         for (Iterator<ForeignKey> it = foreignKeys.iterator(); it.hasNext();) {
-            addForeignKey((ForeignKey) it.next());
+            addForeignKey(it.next());
         }
     }
 
@@ -530,7 +530,7 @@ public class Table implements Serializable, Cloneable, Comparable<Table> {
      * @return The index
      */
     public IIndex getIndex(int idx) {
-        return (IIndex) indices.get(idx);
+        return indices.get(idx);
     }
 
     /**
@@ -567,7 +567,7 @@ public class Table implements Serializable, Cloneable, Comparable<Table> {
      */
     public void addIndices(Collection<IIndex> indices) {
         for (Iterator<IIndex> it = indices.iterator(); it.hasNext();) {
-            addIndex((IIndex) it.next());
+            addIndex(it.next());
         }
     }
 
@@ -577,7 +577,7 @@ public class Table implements Serializable, Cloneable, Comparable<Table> {
      * @return The indices
      */
     public IIndex[] getIndices() {
-        return (IIndex[]) indices.toArray(new IIndex[indices.size()]);
+        return indices.toArray(new IIndex[indices.size()]);
     }
 
     /**
@@ -647,7 +647,7 @@ public class Table implements Serializable, Cloneable, Comparable<Table> {
      */
     public boolean hasPrimaryKey() {
         for (Iterator<Column> it = columns.iterator(); it.hasNext();) {
-            Column column = (Column) it.next();
+            Column column = it.next();
             if (column.isPrimaryKey()) {
                 return true;
             }
@@ -657,7 +657,7 @@ public class Table implements Serializable, Cloneable, Comparable<Table> {
 
     public boolean hasNTypeColumns() {
         for (Iterator<Column> it = columns.iterator(); it.hasNext();) {
-            Column column = (Column) it.next();
+            Column column = it.next();
             if (column.getJdbcTypeCode() == ColumnTypes.NCHAR || column.getJdbcTypeCode() == ColumnTypes.NVARCHAR
                     || column.getJdbcTypeCode() == ColumnTypes.LONGNVARCHAR || column.getJdbcTypeCode() == ColumnTypes.NCLOB
                     || (column.getJdbcTypeName() != null
@@ -670,7 +670,7 @@ public class Table implements Serializable, Cloneable, Comparable<Table> {
 
     public boolean hasGeneratedColumns() {
         for (Iterator<Column> it = columns.iterator(); it.hasNext();) {
-            Column column = (Column) it.next();
+            Column column = it.next();
             if (column.isGenerated()) {
                 return true;
             }
@@ -702,7 +702,7 @@ public class Table implements Serializable, Cloneable, Comparable<Table> {
      */
     public Column findColumn(String name, boolean caseSensitive) {
         for (Iterator<Column> it = columns.iterator(); it.hasNext();) {
-            Column column = (Column) it.next();
+            Column column = it.next();
             if (caseSensitive) {
                 if (column.getName().equals(name)) {
                     return column;
@@ -916,9 +916,10 @@ public class Table implements Serializable, Cloneable, Comparable<Table> {
         if (!foreignKeys.isEmpty()) {
             final Collator collator = Collator.getInstance();
             Collections.sort(foreignKeys, new Comparator<ForeignKey>() {
+                @Override
                 public int compare(ForeignKey obj1, ForeignKey obj2) {
-                    String fk1Name = ((ForeignKey) obj1).getName();
-                    String fk2Name = ((ForeignKey) obj2).getName();
+                    String fk1Name = obj1.getName();
+                    String fk2Name = obj2.getName();
                     if (!caseSensitive) {
                         fk1Name = (fk1Name != null ? fk1Name.toLowerCase() : null);
                         fk2Name = (fk2Name != null ? fk2Name.toLowerCase() : null);
@@ -1073,7 +1074,7 @@ public class Table implements Serializable, Cloneable, Comparable<Table> {
     private ArrayList<Column> populateLobColumns(IDatabasePlatform platform) {
         ArrayList<Column> lobColumns = new ArrayList<Column>();
         for (Column c : columns) {
-            if (platform.isLob(c.getMappedTypeCode())) {
+            if (platform.isLob(c)) {
                 lobColumns.add(c);
             }
         }
@@ -1555,6 +1556,7 @@ public class Table implements Serializable, Cloneable, Comparable<Table> {
         }
     }
 
+    @Override
     public int compareTo(Table o) {
         return this.getFullyQualifiedTableName().compareTo(o.getFullyQualifiedTableName());
     }

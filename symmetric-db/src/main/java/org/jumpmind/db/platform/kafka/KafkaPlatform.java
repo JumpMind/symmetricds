@@ -20,6 +20,7 @@
  */
 package org.jumpmind.db.platform.kafka;
 
+import org.jumpmind.db.model.Column;
 import org.jumpmind.db.platform.AbstractDatabasePlatform;
 import org.jumpmind.db.sql.ISqlTemplate;
 import org.jumpmind.db.sql.SqlTemplateSettings;
@@ -53,7 +54,7 @@ public class KafkaPlatform extends AbstractDatabasePlatform {
     }
 
     @Override
-    public boolean isLob(int type) {
+    public boolean isLob(Column column) {
         return false;
     }
 
@@ -66,4 +67,5 @@ public class KafkaPlatform extends AbstractDatabasePlatform {
     public ISqlTemplate getSqlTemplateDirty() {
         return new KafkaSqlTemplate();
     }
+
 }

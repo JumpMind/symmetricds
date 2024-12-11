@@ -102,17 +102,20 @@ public class OracleDatabasePlatform extends AbstractJdbcDatabasePlatform {
         return sqlTemplate;
     }
 
+    @Override
     public String getName() {
         return DatabaseNamesConstants.ORACLE;
     }
 
+    @Override
     public String getDefaultCatalog() {
         return null;
     }
 
+    @Override
     public String getDefaultSchema() {
         if (StringUtils.isBlank(defaultSchema)) {
-            defaultSchema = (String) getSqlTemplate()
+            defaultSchema = getSqlTemplate()
                     .queryForObject("SELECT sys_context('USERENV', 'CURRENT_SCHEMA') FROM dual", String.class);
         }
         return defaultSchema;
@@ -120,7 +123,7 @@ public class OracleDatabasePlatform extends AbstractJdbcDatabasePlatform {
 
     @Override
     public boolean canColumnBeUsedInWhereClause(Column column) {
-        return !(isLob(column.getJdbcTypeCode()) || isGeometry(column)) && super.canColumnBeUsedInWhereClause(column);
+        return !(isLob(column) || isGeometry(column)) && super.canColumnBeUsedInWhereClause(column);
     }
 
     private boolean isGeometry(Column column) {
@@ -301,7 +304,7 @@ public class OracleDatabasePlatform extends AbstractJdbcDatabasePlatform {
 
     @Override
     public String getCharSetName() {
-        return (String) getSqlTemplate().queryForObject("select value from nls_database_parameters where\r\n"
+        return getSqlTemplate().queryForObject("select value from nls_database_parameters where\r\n"
                 + "parameter='NLS_CHARACTERSET'", String.class);
     }
 }

@@ -182,11 +182,11 @@ public interface IDatabasePlatform {
 
     public void prefixDatabase(String prefix, Database targetTables);
 
-    public boolean isLob(int type);
+    public boolean isLob(Column column);
 
-    public boolean isClob(int type);
+    public boolean isClob(Column column);
 
-    public boolean isBlob(int type);
+    public boolean isBlob(Column column);
 
     public List<Column> getLobColumns(Table table);
 
