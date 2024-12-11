@@ -111,10 +111,12 @@ public class AseDatabasePlatform extends AbstractJdbcDatabasePlatform {
         return new AseJdbcSqlTemplate(dataSource, settings, null, getDatabaseInfo());
     }
 
+    @Override
     public String getName() {
         return DatabaseNamesConstants.ASE;
     }
 
+    @Override
     public String getDefaultCatalog() {
         if (StringUtils.isBlank(defaultCatalog)) {
             defaultCatalog = getSqlTemplate().queryForObject("select DB_NAME()", String.class);
@@ -122,9 +124,10 @@ public class AseDatabasePlatform extends AbstractJdbcDatabasePlatform {
         return defaultCatalog;
     }
 
+    @Override
     public String getDefaultSchema() {
         if (StringUtils.isBlank(defaultSchema)) {
-            defaultSchema = (String) getSqlTemplate().queryForObject("select USER_NAME()", String.class);
+            defaultSchema = getSqlTemplate().queryForObject("select USER_NAME()", String.class);
         }
         return defaultSchema;
     }
@@ -136,7 +139,7 @@ public class AseDatabasePlatform extends AbstractJdbcDatabasePlatform {
 
     @Override
     public boolean canColumnBeUsedInWhereClause(Column column) {
-        return !isLob(column.getJdbcTypeCode()) && super.canColumnBeUsedInWhereClause(column);
+        return !isLob(column) && super.canColumnBeUsedInWhereClause(column);
     }
 
     @Override
