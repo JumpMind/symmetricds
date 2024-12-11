@@ -1159,7 +1159,7 @@ public class DefaultDatabaseWriter extends AbstractDatabaseWriter {
              * previously null.
              */
             boolean containsEmptyLobColumn = getPlatform().isLob(column.getMappedTypeCode())
-                    && StringUtils.isBlank(oldData[targetColumnIndex]) && !StringUtils.isBlank(rowData[targetColumnIndex]);
+                    && StringUtils.isBlank(oldData[targetColumnIndex]);
             needsUpdated = !StringUtils.equals(rowData[targetColumnIndex], oldData[targetColumnIndex])
                     || data.getParsedData(CsvData.OLD_DATA) == null
                     || containsEmptyLobColumn;
