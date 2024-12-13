@@ -131,7 +131,9 @@ public class SqlScriptReader extends LineNumberReader implements ISqlStatementSo
     }
 
     protected String prepareForExecute(String toExecute) {
-        toExecute = removeComments(toExecute);
+        if (stripOutBlockComments) {
+            toExecute = removeComments(toExecute);
+        }
         toExecute = FormatUtils.replaceTokens(toExecute, replacementTokens, usePrefixSuffixForReplacementTokens);
         if (StringUtils.isNotBlank(toExecute)) {
             return toExecute.trim();
