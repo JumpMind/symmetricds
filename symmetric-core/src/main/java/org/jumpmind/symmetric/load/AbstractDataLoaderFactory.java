@@ -75,7 +75,7 @@ public abstract class AbstractDataLoaderFactory {
         settings.setLogSqlParamsOnError(parameterService.is(ParameterConstants.DATA_LOADER_LOG_SQL_PARAMS_ON_ERROR, true));
         settings.setCreateIndexConvertUniqueToNonuniqueWhenColumnsNotRequired(
                 parameterService.is(ParameterConstants.CREATE_INDEX_CONVERT_UNIQUE_TO_NONUNIQUE_WHEN_COLUMNS_NOT_REQUIRED, true));
-        settings.setStripOutBlockCommentsInScripts(parameterService.is(ParameterConstants.DATA_LOADER_SQL_EVENT_STRIP_BLOCK_COMMENTS, true));
+        settings.setStripOutCommentsInScripts(parameterService.is(ParameterConstants.DATA_LOADER_SQL_EVENT_STRIP_COMMENTS, true));
         Map<String, Conflict> byChannel = new HashMap<String, Conflict>();
         Map<String, Conflict> byTable = new HashMap<String, Conflict>();
         boolean multipleDefaultSettingsFound = false;
