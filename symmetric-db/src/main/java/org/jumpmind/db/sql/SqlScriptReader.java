@@ -37,7 +37,7 @@ public class SqlScriptReader extends LineNumberReader implements ISqlStatementSo
     private String delimiter = QUERY_ENDS;
     private Map<String, String> replacementTokens;
     private boolean usePrefixSuffixForReplacementTokens = false;
-    private boolean stripOutBlockComments = false;
+    private boolean stripOutComments = true;
     private boolean triggersContainJava = false;
 
     public SqlScriptReader(Reader in) {
@@ -53,12 +53,12 @@ public class SqlScriptReader extends LineNumberReader implements ISqlStatementSo
         this.usePrefixSuffixForReplacementTokens = usePrefixSuffixForReplacementTokens;
     }
 
-    public void setStripOutBlockComments(boolean stripOutBlockComments) {
-        this.stripOutBlockComments = stripOutBlockComments;
+    public void setStripOutComments(boolean stripOutComments) {
+        this.stripOutComments = stripOutComments;
     }
 
-    public boolean isStripOutBlockComments() {
-        return stripOutBlockComments;
+    public boolean isStripOutComments() {
+        return stripOutComments;
     }
 
     public boolean isUsePrefixSuffixForReplacementTokens() {
@@ -81,6 +81,7 @@ public class SqlScriptReader extends LineNumberReader implements ISqlStatementSo
         return replacementTokens;
     }
 
+    @Override
     public String readSqlStatement() {
         try {
             String line = readLine();
@@ -131,7 +132,9 @@ public class SqlScriptReader extends LineNumberReader implements ISqlStatementSo
     }
 
     protected String prepareForExecute(String toExecute) {
-        toExecute = removeComments(toExecute);
+        if (stripOutComments) {
+            toExecute = removeComments(toExecute);
+        }
         toExecute = FormatUtils.replaceTokens(toExecute, replacementTokens, usePrefixSuffixForReplacementTokens);
         if (StringUtils.isNotBlank(toExecute)) {
             return toExecute.trim();
@@ -187,7 +190,7 @@ public class SqlScriptReader extends LineNumberReader implements ISqlStatementSo
     }
 
     private final boolean isBlockCommentStart(char prev, char cur) {
-        return stripOutBlockComments && (prev == '/' && cur == '*');
+        return stripOutComments && (prev == '/' && cur == '*');
     }
 
     private final boolean isBlockCommentEnd(char prev, char cur) {

@@ -207,7 +207,7 @@ public class SqlRunner extends Thread {
                 }
                 try (SqlScriptReader sqlReader = new SqlScriptReader(new StringReader(sqlText))) {
                     sqlReader.setDelimiter(delimiter);
-                    sqlReader.setStripOutBlockComments(true);
+                    sqlReader.setStripOutComments(true);
                     String sql = sqlReader.readSqlStatement();
                     while (sql != null) {
                         JdbcSqlTemplate.close(stmt);

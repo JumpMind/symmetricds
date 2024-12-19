@@ -1075,6 +1075,7 @@ public class DefaultDatabaseWriter extends AbstractDatabaseWriter {
     protected List<String> getSqlStatements(String script) {
         List<String> sqlStatements = new ArrayList<String>();
         SqlScriptReader scriptReader = new SqlScriptReader(new StringReader(script));
+        scriptReader.setStripOutComments(writerSettings.isStripOutCommentsInScripts());
         try {
             String sql = scriptReader.readSqlStatement();
             while (sql != null) {
