@@ -26,6 +26,10 @@ import java.nio.charset.Charset;
 import java.sql.DataTruncation;
 import java.sql.SQLException;
 import java.sql.Types;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
@@ -115,6 +119,11 @@ public class DataService extends AbstractService implements IDataService {
     private ISymmetricEngine engine;
     private IExtensionService extensionService;
 
+    public static final int PROGRESS_LOG_UPDATE_DELAY_MS = 30000;
+    public static final transient String TIMESTAMP_ISO_JSON_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"; // Zulu == UTC is used in transaction ID for stale data
+    public static final transient DateTimeFormatter isoJsonDateTimeFormatter = DateTimeFormatter.ofPattern(TIMESTAMP_ISO_JSON_FORMAT).withZone(ZoneId.from(
+            ZoneOffset.UTC));
+
     public DataService(ISymmetricEngine engine, IExtensionService extensionService) {
         super(engine.getParameterService(), engine.getSymmetricDialect());
         this.engine = engine;
@@ -125,6 +134,14 @@ public class DataService extends AbstractService implements IDataService {
     }
 
     protected Map<IHeartbeatListener, Long> lastHeartbeatTimestamps = new HashMap<IHeartbeatListener, Long>();
+
+
+    /**
+     * Helper. Creates an ISO-compliant transaction Id string for specified instant and prefix.
+     */
+    public String generateTransactionIdFromTimestamp(String prefix, Instant instant) {
+        return prefix + isoJsonDateTimeFormatter.format(instant);
+    }
 
     @Override
     public int cancelTableReloadRequest(TableReloadRequest request) {
@@ -2961,7 +2978,7 @@ public class DataService extends AbstractService implements IDataService {
         if (gaps.size() > 0) {
             int[] types = new int[] { Types.VARCHAR, Types.NUMERIC, Types.NUMERIC, Types.NUMERIC, Types.TIMESTAMP };
             int maxRowsToFlush = engine.getParameterService().getInt(ParameterConstants.ROUTING_FLUSH_JDBC_BATCH_SIZE);
-            long ts = System.currentTimeMillis();
+            long lastUpdateTimestamp = System.currentTimeMillis();
             int flushCount = 0, totalCount = 0;
             transaction.setInBatchMode(true);
             transaction.prepare(getSql("insertDataGapSql"));
@@ -2973,9 +2990,9 @@ public class DataService extends AbstractService implements IDataService {
                     transaction.flush();
                     flushCount = 0;
                 }
-                if (System.currentTimeMillis() - ts > 30000) {
+                if (System.currentTimeMillis() - lastUpdateTimestamp > PROGRESS_LOG_UPDATE_DELAY_MS) {
                     log.info("Inserted {} of {} new gaps", totalCount, gaps.size());
-                    ts = System.currentTimeMillis();
+                    lastUpdateTimestamp = System.currentTimeMillis();
                 }
             }
             transaction.flush();
@@ -3022,7 +3039,7 @@ public class DataService extends AbstractService implements IDataService {
         if (gaps.size() > 0) {
             int[] types = new int[] { symmetricDialect.getSqlTypeForIds(), symmetricDialect.getSqlTypeForIds() };
             int maxRowsToFlush = engine.getParameterService().getInt(ParameterConstants.ROUTING_FLUSH_JDBC_BATCH_SIZE);
-            long ts = System.currentTimeMillis();
+            long lastUpdateTimestamp = System.currentTimeMillis();
             int flushCount = 0, totalCount = 0;
             transaction.setInBatchMode(true);
             transaction.prepare(getSql("deleteDataGapSql"));
@@ -3032,9 +3049,9 @@ public class DataService extends AbstractService implements IDataService {
                     transaction.flush();
                     flushCount = 0;
                 }
-                if (System.currentTimeMillis() - ts > 30000) {
+                if (System.currentTimeMillis() - lastUpdateTimestamp > PROGRESS_LOG_UPDATE_DELAY_MS) {
                     log.info("Deleted {} of {} old gaps", totalCount, gaps.size());
-                    ts = System.currentTimeMillis();
+                    lastUpdateTimestamp = System.currentTimeMillis();
                 }
             }
             transaction.flush();
@@ -3051,7 +3068,7 @@ public class DataService extends AbstractService implements IDataService {
         if (gaps.size() > 0) {
             int[] types = new int[] { symmetricDialect.getSqlTypeForIds(), symmetricDialect.getSqlTypeForIds() };
             int maxRowsToFlush = engine.getParameterService().getInt(ParameterConstants.ROUTING_FLUSH_JDBC_BATCH_SIZE);
-            long ts = System.currentTimeMillis();
+            long lastUpdateTimestamp = System.currentTimeMillis();
             int flushCount = 0, totalCount = 0;
             transaction.setInBatchMode(true);
             transaction.prepare(getSql("expireDataGapSql"));
@@ -3061,9 +3078,9 @@ public class DataService extends AbstractService implements IDataService {
                     transaction.flush();
                     flushCount = 0;
                 }
-                if (System.currentTimeMillis() - ts > 30000) {
+                if (System.currentTimeMillis() - lastUpdateTimestamp > PROGRESS_LOG_UPDATE_DELAY_MS) {
                     log.info("Expired {} of {} gaps", totalCount, gaps.size());
-                    ts = System.currentTimeMillis();
+                    lastUpdateTimestamp = System.currentTimeMillis();
                 }
             }
             transaction.flush();
@@ -3595,15 +3612,19 @@ public class DataService extends AbstractService implements IDataService {
         Table table = null;
         String[] keys = null;
         Data lastData = null;
-        long ts = System.currentTimeMillis();
+        long lastUpdateTimestamp = 0;
+        String recaptureTransactionId = this.generateTransactionIdFromTimestamp("recapture-", Instant.now());
         try {
             for (Data data : dataList) {
                 lastData = data;
+                if (data.isPreRouted() || !(data.getDataEventType().isDml())) {
+                    continue;
+                }
                 TriggerHistory hist = data.getTriggerHistory();
                 Set<TriggerRouter> triggerRouters = engine.getTriggerRouterService().getTriggerRouterForTableForCurrentNode(
                         hist.getSourceCatalogName(), hist.getSourceSchemaName(), hist.getSourceTableName(), false);
                 table = platform.getTableFromCache(hist.getSourceCatalogName(), hist.getSourceSchemaName(), hist.getSourceTableName(), false);
-                if (triggerRouters != null && triggerRouters.size() > 0 && table != null && data.getDataEventType().isDml() && !data.isPreRouted()) {
+                if (triggerRouters != null && triggerRouters.size() > 0 && table != null) {
                     Trigger trigger = triggerRouters.iterator().next().getTrigger();
                     table = table.copyAndFilterColumns(hist.getParsedColumnNames(), hist.getParsedPkColumnNames(), true, false);
                     if (data.getDataEventType() == DataEventType.INSERT) {
@@ -3650,9 +3671,15 @@ public class DataService extends AbstractService implements IDataService {
                         data.setPkData(pkData);
                     }
                     if (hasColumnDataIntegrity(data, hist)) {
+                        data.setTransactionId(recaptureTransactionId);
                         insertList.add(data);
+                        if (System.currentTimeMillis() - lastUpdateTimestamp > PROGRESS_LOG_UPDATE_DELAY_MS) {
+                            log.info("Recaptured stale data_id={}; table={} (from a list of {})", data.getDataId(), table.getName(), dataList.size());
+                        } else if (log.isDebugEnabled()) {
+                            log.debug("Recaptured stale data_id={}; table={}", data.getDataId(), table.getName());
+                        }
+                        lastUpdateTimestamp = System.currentTimeMillis();
                     }
-                    data.setTransactionId("recapture-" + ts);
                 }
             }
         } catch (RuntimeException e) {
