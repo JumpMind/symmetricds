@@ -3606,84 +3606,121 @@ public class DataService extends AbstractService implements IDataService {
         return count;
     }
 
+    /**
+     * Attempts to recapture (expired) data rows and re-insert them back into sym_data under a new transaction ID
+     * 
+     * @return number of recaptured data rows
+     */
     protected int reCaptureData(List<Data> dataList) {
         List<Data> insertList = new ArrayList<Data>();
-        ISqlTransaction transaction = null;
-        Table table = null;
-        String[] keys = null;
-        Data lastData = null;
         long lastUpdateTimestamp = 0;
         String recaptureTransactionId = this.generateTransactionIdFromTimestamp("recapture-", Instant.now());
+        int insertedCount = 0;
         try {
             for (Data data : dataList) {
-                lastData = data;
-                if (data.isPreRouted() || !(data.getDataEventType().isDml())) {
+                Data recapturedData = fetchRecapturedData(data, recaptureTransactionId);
+                if (recapturedData == null) {
                     continue;
                 }
-                TriggerHistory hist = data.getTriggerHistory();
-                Set<TriggerRouter> triggerRouters = engine.getTriggerRouterService().getTriggerRouterForTableForCurrentNode(
-                        hist.getSourceCatalogName(), hist.getSourceSchemaName(), hist.getSourceTableName(), false);
-                table = platform.getTableFromCache(hist.getSourceCatalogName(), hist.getSourceSchemaName(), hist.getSourceTableName(), false);
-                if (triggerRouters != null && triggerRouters.size() > 0 && table != null) {
-                    Trigger trigger = triggerRouters.iterator().next().getTrigger();
-                    table = table.copyAndFilterColumns(hist.getParsedColumnNames(), hist.getParsedPkColumnNames(), true, false);
-                    if (data.getDataEventType() == DataEventType.INSERT) {
-                        keys = data.toParsedRowData();
-                        if (keys != null && keys.length >= table.getPrimaryKeyColumnCount()) {
-                            keys = ArrayUtils.subarray(keys, 0, table.getPrimaryKeyColumnCount());
-                        }
-                    } else {
-                        keys = data.toParsedPkData();
-                    }
-                    Object[] values = platform.getObjectValues(engine.getSymmetricDialect().getBinaryEncoding(), keys, table.getPrimaryKeyColumns());
-                    if (keys == null || values == null) {
-                        continue;
-                    }
-                    Row row = new Row(keys.length);
-                    String[] keyNames = table.getPrimaryKeyColumnNames();
-                    for (int i = 0; i < keyNames.length && i < values.length; i++) {
-                        row.put(keyNames[i], values[i]);
-                    }
-                    DmlStatement st = platform.createDmlStatement(DmlType.WHERE, hist.getSourceCatalogName(), hist.getSourceSchemaName(),
-                            hist.getSourceTableName(), table.getPrimaryKeyColumns(), table.getColumns(), DmlStatement.getNullKeyValues(keys), null);
-                    String whereClause = st.buildDynamicSql(symmetricDialect.getBinaryEncoding(), row, false,
-                            platform.getDatabaseInfo().isJdbcTimestampAllowed()).substring(6);
-                    String delimiter = platform.getDatabaseInfo().getSqlCommandDelimiter();
-                    if (delimiter != null && delimiter.length() > 0) {
-                        whereClause = whereClause.substring(0, whereClause.length() - delimiter.length());
-                    }
-                    String rowData = null;
-                    String pkData = data.getPkData();
-                    transaction = sqlTemplate.startSqlTransaction();
-                    if (data.getDataEventType() == DataEventType.INSERT || data.getDataEventType() == DataEventType.UPDATE) {
-                        rowData = getCsvDataFor(transaction, trigger, hist, whereClause, false);
-                    }
-                    if (rowData != null && data.getDataEventType() == DataEventType.INSERT) {
-                        pkData = getCsvDataFor(transaction, trigger, hist, whereClause, true);
-                    }
-                    close(transaction);
-                    transaction = null;
-                    if (rowData != null && (data.getDataEventType() == DataEventType.INSERT || data.getDataEventType() == DataEventType.UPDATE)) {
-                        data.setDataEventType(DataEventType.UPDATE);
-                        data.setRowData(rowData);
-                        data.setPkData(pkData);
-                    } else if (rowData == null && data.getDataEventType() == DataEventType.DELETE) {
-                        data.setPkData(pkData);
-                    }
-                    if (hasColumnDataIntegrity(data, hist)) {
-                        data.setTransactionId(recaptureTransactionId);
-                        insertList.add(data);
-                        if (System.currentTimeMillis() - lastUpdateTimestamp > PROGRESS_LOG_UPDATE_DELAY_MS) {
-                            log.info("Recaptured stale data_id={}; table={} (from a list of {})", data.getDataId(), table.getName(), dataList.size());
-                        } else if (log.isDebugEnabled()) {
-                            log.debug("Recaptured stale data_id={}; table={}", data.getDataId(), table.getName());
-                        }
-                        lastUpdateTimestamp = System.currentTimeMillis();
-                    }
+                insertList.add(recapturedData);
+                if (System.currentTimeMillis() - lastUpdateTimestamp > PROGRESS_LOG_UPDATE_DELAY_MS) {
+                    lastUpdateTimestamp = System.currentTimeMillis();
+                    log.info("Recaptured stale data_id={}; table={} (from a list of {})", recapturedData.getDataId(), recapturedData.getTableName(), dataList
+                            .size());
+                    // TODO: Consider batching records for same table and trigger router together
+                    recaptureTransactionId = this.generateTransactionIdFromTimestamp("recapture-", Instant.now());
+                } else if (log.isDebugEnabled()) {
+                    log.debug("Recaptured stale data_id={}; table={}", recapturedData.getDataId(), recapturedData.getTableName());
                 }
             }
+            insertedCount = insertRecapturedData(insertList, 10000); // TODO: Derive from some parameter
         } catch (RuntimeException e) {
-            if (table != null && keys != null && lastData != null) {
+            if (insertedCount == 0 && insertList.size() > 0) {
+                insertedCount = insertRecapturedData(insertList, 10000);
+            }
+        }
+        return insertedCount;
+    }
+
+    /**
+     * Attempts to recapture expired data row, which is still relevant and assigns a new transaction ID
+     * 
+     * @return recaptured data row
+     */
+    protected Data fetchRecapturedData(Data data, String recaptureTransactionId) {
+        if (data == null  ) {
+            return null;
+        }
+        if (data.isPreRouted() || !(data.getDataEventType().isDml())) {
+            return null;
+        }
+        Table table = null;
+        String[] keys = null;
+        ISqlTransaction transaction = null;
+        try {
+            TriggerHistory hist = data.getTriggerHistory();
+            if (hist == null) {
+                log.warn("Unable to recapture stale data_id={} because table={} no longer has trigger history! channel_id={})", data.getDataId(), data
+                        .getTableName(), data.getChannelId());
+                return null;
+            }
+            String fullTableName = hist.getSourceCatalogName() + "." + hist.getSourceSchemaName() + "." + hist.getSourceTableName();
+            Set<TriggerRouter> triggerRouters = engine.getTriggerRouterService().getTriggerRouterForTableForCurrentNode(
+                    hist.getSourceCatalogName(), hist.getSourceSchemaName(), hist.getSourceTableName(), false);
+            if (triggerRouters == null || triggerRouters.size() <= 0) {
+                log.warn("Unable to recapture stale data_id={} because table={} no longer has a trigger-router! channel_id={})", data.getDataId(),
+                        fullTableName, data.getChannelId());
+                return null;
+            }
+            table = platform.getTableFromCache(hist.getSourceCatalogName(), hist.getSourceSchemaName(), hist.getSourceTableName(), false);
+            if (table == null) {
+                log.warn("Unable to recapture stale data_id={} because table={} was not found!)", data.getDataId(), fullTableName);
+                return null;
+            }
+            Trigger trigger = triggerRouters.iterator().next().getTrigger();
+            table = table.copyAndFilterColumns(hist.getParsedColumnNames(), hist.getParsedPkColumnNames(), true, false);
+            keys = recaptureKeysForData(table, data);
+            Object[] values = platform.getObjectValues(engine.getSymmetricDialect().getBinaryEncoding(), keys, table.getPrimaryKeyColumns());
+            if (keys == null || values == null) {
+                return null;
+            }
+            String whereClause = recaptureWhereFilterForKeys(table, hist, keys, values);
+            String rowData = null;
+            String pkData = data.getPkData();
+            if (data.getDataEventType() == DataEventType.INSERT || data.getDataEventType() == DataEventType.UPDATE) {
+                transaction = sqlTemplate.startSqlTransaction();
+                rowData = getCsvDataFor(transaction, trigger, hist, whereClause, false);
+                if (rowData != null && data.getDataEventType() == DataEventType.INSERT) {
+                    pkData = getCsvDataFor(transaction, trigger, hist, whereClause, true);
+                }
+                close(transaction);
+                transaction = null;
+            }
+            Data recapturedData = new Data(
+                    data.getDataId(), null, null, data.getDataEventType(),
+                    data.getTableName(), data.getCreateTime(), data.getTriggerHistory(), data.getChannelId(),
+                    recaptureTransactionId, data.getSourceNodeId());
+            if (recapturedData.getDataEventType() == DataEventType.INSERT || recapturedData.getDataEventType() == DataEventType.UPDATE) {
+                if (rowData == null) {
+                    return null; // Data row is no longer in the source table.
+                }
+                recapturedData.setDataEventType(DataEventType.UPDATE);
+                recapturedData.setRowData(rowData);
+                recapturedData.setPkData(pkData);
+                return recapturedData;
+            }
+            if (recapturedData.getDataEventType() == DataEventType.DELETE) {
+                if (rowData != null) {
+                    return null; // Data row now exists in the source table.
+                }
+                recapturedData.setPkData(pkData);
+                return recapturedData;
+            }
+            log.warn("Unable to recapture stale data_id={} for table={} because of unsupported event type={}", data.getDataId(), fullTableName, data
+                    .getDataEventType().toString());
+            return null; // Unsupported event type
+        } catch (RuntimeException e) {
+            if (table != null && keys != null) {
                 Column[] columns = table.getPrimaryKeyColumns();
                 String[] names = new String[columns.length];
                 String[] types = new String[columns.length];
@@ -3693,22 +3730,53 @@ public class DataService extends AbstractService implements IDataService {
                     types[i++] = col.getMappedType();
                 }
                 StringBuilder failureMessage = new StringBuilder();
-                failureMessage.append("Failed to recapture for data ").append(lastData.getDataId());
-                failureMessage.append(" event type ").append(lastData.getDataEventType().toString());
+                failureMessage.append("Failed to recapture for data ").append(data.getDataId());
+                failureMessage.append(" event type ").append(data.getDataEventType().toString());
                 failureMessage.append(" table ").append(table.getName());
                 failureMessage.append(" with primary key ").append(ArrayUtils.toString(names));
                 failureMessage.append(" and types ").append(ArrayUtils.toString(types)).append("\n");
-                lastData.writeCsvDataDetails(failureMessage);
+                data.writeCsvDataDetails(failureMessage);
                 log.info(failureMessage.toString());
+            } else {
+                log.warn("Exception during recapture of stale data_id={}; table={}; Event type={}; Message={}", data.getDataId(), data.getTableName(), data
+                        .getDataEventType().toString(), e.getMessage());
             }
             throw e;
+        } catch (Exception ex) {
+            log.error("Non-RuntimeException during recapture of stale data_id={}; table={}; Event type={}; Message={}", data.getDataId(), data.getTableName(),
+                    data.getDataEventType().toString(), ex.getMessage());
+            throw ex;
         } finally {
-            close(transaction);
+            if (transaction != null) {
+                close(transaction);
+                transaction = null;
+            }
         }
+    }
+
+    /**
+     * Inserts recaptured data back into sym_data
+     * 
+     * @return number of inserted rows
+     */
+    protected int insertRecapturedData(List<Data> insertList, int commitLimit) {
+        if (insertList == null || insertList.size() < 0) {
+            return 0;
+        }
+        if (commitLimit < 1) {
+            commitLimit = insertList.size();
+        }
+        ISqlTransaction transaction = null;
         try {
             transaction = sqlTemplate.startSqlTransaction();
-            for (Data data : insertList) {
+            int waitForLastCommit = insertList.size() - (commitLimit / 4);
+            for (int i = 0; i < insertList.size(); i++) {
+                Data data = insertList.get(i);
                 insertData(transaction, data);
+                if (i % commitLimit == 0 && i < waitForLastCommit) {
+                    transaction.commit();
+                    transaction = sqlTemplate.startSqlTransaction();
+                }
             }
             transaction.commit();
         } catch (Exception ex) {
@@ -3720,6 +3788,42 @@ public class DataService extends AbstractService implements IDataService {
             close(transaction);
         }
         return insertList.size();
+    }
+
+    /**
+     * Looks up values of primary keys for specified data row object
+     */
+    protected String[] recaptureKeysForData(Table table, Data data) {
+        String[] keys = null;
+        if (data.getDataEventType() == DataEventType.INSERT) {
+            keys = data.toParsedRowData();
+            if (keys != null && keys.length >= table.getPrimaryKeyColumnCount()) {
+                keys = ArrayUtils.subarray(keys, 0, table.getPrimaryKeyColumnCount());
+            }
+        } else {
+            keys = data.toParsedPkData();
+        }
+        return keys;
+    }
+
+    /**
+     * Extracts filter for a where clause for specified values of primary keys
+     */
+    protected String recaptureWhereFilterForKeys(Table table, TriggerHistory hist, String[] keys, Object[] values) {
+        Row row = new Row(keys.length);
+        String[] keyNames = table.getPrimaryKeyColumnNames();
+        for (int i = 0; i < keyNames.length && i < values.length; i++) {
+            row.put(keyNames[i], values[i]);
+        }
+        DmlStatement st = platform.createDmlStatement(DmlType.WHERE, hist.getSourceCatalogName(), hist.getSourceSchemaName(),
+                hist.getSourceTableName(), table.getPrimaryKeyColumns(), table.getColumns(), DmlStatement.getNullKeyValues(keys), null);
+        String whereClause = st.buildDynamicSql(symmetricDialect.getBinaryEncoding(), row, false,
+                platform.getDatabaseInfo().isJdbcTimestampAllowed()).substring(6);
+        String delimiter = platform.getDatabaseInfo().getSqlCommandDelimiter();
+        if (delimiter != null && delimiter.length() > 0) {
+            whereClause = whereClause.substring(0, whereClause.length() - delimiter.length());
+        }
+        return whereClause;
     }
 
     protected boolean hasColumnDataIntegrity(Data data, TriggerHistory hist) {
