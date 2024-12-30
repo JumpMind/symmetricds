@@ -119,6 +119,7 @@ public class DataService extends AbstractService implements IDataService {
     private ISymmetricEngine engine;
     private IExtensionService extensionService;
 
+    public static final int RECAPTURE_DATA_COMMIT_LIMIT = 1000;
     public static final int PROGRESS_LOG_UPDATE_DELAY_MS = 30000;
     public static final transient String TIMESTAMP_ISO_JSON_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"; // Zulu == UTC is used in transaction ID for stale data
     public static final transient DateTimeFormatter isoJsonDateTimeFormatter = DateTimeFormatter.ofPattern(TIMESTAMP_ISO_JSON_FORMAT).withZone(ZoneId.from(
@@ -3596,18 +3597,37 @@ public class DataService extends AbstractService implements IDataService {
         data.setChannelId(Constants.CHANNEL_RELOAD);
     }
 
+    /**
+     * Attempts to recapture stale data rows between specified Ids and re-insert them back into sym_data with a new transaction ID. Commits every
+     * RECAPTURE_DATA_COMMIT_LIMIT records to avoid locking sym_data from other processes.
+     * 
+     * @return number of recaptured data rows
+     */
     @Override
     public int reCaptureData(long minDataId, long maxDataId) {
-        List<Data> dataList = findData(minDataId, maxDataId);
-        int count = 0;
-        if (dataList.size() > 0) {
-            count = reCaptureData(dataList);
+        long queryStartDataId = minDataId;
+        long queryEndDataId = Long.min(minDataId + RECAPTURE_DATA_COMMIT_LIMIT - 1, maxDataId);
+        List<Data> dataList = findData(queryStartDataId, queryEndDataId);
+        if (dataList == null || dataList.size() < 1) {
+            return 0;
         }
-        return count;
+        int reCapturedCount = 0;
+        while (queryStartDataId <= maxDataId) {
+            if (dataList.size() > 0) {
+                reCapturedCount += reCaptureData(dataList);
+            }
+            queryStartDataId = ++queryEndDataId;
+            queryEndDataId = Long.min(queryEndDataId + RECAPTURE_DATA_COMMIT_LIMIT - 1, maxDataId);
+            if (queryStartDataId > maxDataId) {
+                break;
+            }
+            dataList = findData(queryStartDataId, queryEndDataId);
+        }
+        return reCapturedCount;
     }
 
     /**
-     * Attempts to recapture (expired) data rows and re-insert them back into sym_data under a new transaction ID
+     * Attempts to recapture stale data rows and re-insert them back into sym_data with a new transaction ID (all records are in one transaction).
      * 
      * @return number of recaptured data rows
      */
@@ -3633,10 +3653,10 @@ public class DataService extends AbstractService implements IDataService {
                     log.debug("Recaptured stale data_id={}; table={}", recapturedData.getDataId(), recapturedData.getTableName());
                 }
             }
-            insertedCount = insertRecapturedData(insertList, 10000); // TODO: Derive from some parameter
+            insertedCount = insertRecapturedData(insertList);
         } catch (RuntimeException e) {
             if (insertedCount == 0 && insertList.size() > 0) {
-                insertedCount = insertRecapturedData(insertList, 10000);
+                insertedCount = insertRecapturedData(insertList);
             }
         }
         return insertedCount;
@@ -3687,34 +3707,37 @@ public class DataService extends AbstractService implements IDataService {
             String whereClause = recaptureWhereFilterForKeys(table, hist, keys, values);
             String rowData = null;
             String pkData = data.getPkData();
+            // Look this record up:
+            transaction = sqlTemplate.startSqlTransaction();
+            rowData = getCsvDataFor(transaction, trigger, hist, whereClause, false);
+            if (rowData != null && data.getDataEventType() == DataEventType.INSERT) {
+                pkData = getCsvDataFor(transaction, trigger, hist, whereClause, true);
+            }
+            close(transaction);
+            transaction = null;
             if (data.getDataEventType() == DataEventType.INSERT || data.getDataEventType() == DataEventType.UPDATE) {
-                transaction = sqlTemplate.startSqlTransaction();
-                rowData = getCsvDataFor(transaction, trigger, hist, whereClause, false);
-                if (rowData != null && data.getDataEventType() == DataEventType.INSERT) {
-                    pkData = getCsvDataFor(transaction, trigger, hist, whereClause, true);
-                }
-                close(transaction);
-                transaction = null;
-            }
-            Data recapturedData = new Data(
-                    data.getDataId(), null, null, data.getDataEventType(),
-                    data.getTableName(), data.getCreateTime(), data.getTriggerHistory(), data.getChannelId(),
-                    recaptureTransactionId, data.getSourceNodeId());
-            if (recapturedData.getDataEventType() == DataEventType.INSERT || recapturedData.getDataEventType() == DataEventType.UPDATE) {
                 if (rowData == null) {
-                    return null; // Data row is no longer in the source table.
+                    log.info("Skipped recapture of stale data because record no longer exists in database. data_id={}; table={}; Event type={}", data
+                            .getDataId(), data.getTableName(),
+                            data.getDataEventType().toString());
+                    return null;
                 }
-                recapturedData.setDataEventType(DataEventType.UPDATE);
-                recapturedData.setRowData(rowData);
-                recapturedData.setPkData(pkData);
-                return recapturedData;
+                return new Data(
+                        data.getDataId(), pkData, rowData, DataEventType.UPDATE,
+                        data.getTableName(), data.getCreateTime(), data.getTriggerHistory(), data.getChannelId(),
+                        recaptureTransactionId, data.getSourceNodeId());
             }
-            if (recapturedData.getDataEventType() == DataEventType.DELETE) {
+            if (data.getDataEventType() == DataEventType.DELETE) {
                 if (rowData != null) {
-                    return null; // Data row now exists in the source table.
+                    log.info("Skipped recapture of stale data because record exists in database. data_id={}; table={}; Event type={}", data.getDataId(), data
+                            .getTableName(),
+                            data.getDataEventType().toString());
+                    return null;
                 }
-                recapturedData.setPkData(pkData);
-                return recapturedData;
+                return new Data(
+                        data.getDataId(), pkData, null, data.getDataEventType(),
+                        data.getTableName(), data.getCreateTime(), data.getTriggerHistory(), data.getChannelId(),
+                        recaptureTransactionId, data.getSourceNodeId());
             }
             log.warn("Unable to recapture stale data_id={} for table={} because of unsupported event type={}", data.getDataId(), fullTableName, data
                     .getDataEventType().toString());
@@ -3759,33 +3782,29 @@ public class DataService extends AbstractService implements IDataService {
      * 
      * @return number of inserted rows
      */
-    protected int insertRecapturedData(List<Data> insertList, int commitLimit) {
+    protected int insertRecapturedData(List<Data> insertList) {
         if (insertList == null || insertList.size() < 0) {
             return 0;
         }
-        if (commitLimit < 1) {
-            commitLimit = insertList.size();
-        }
+
         ISqlTransaction transaction = null;
         try {
             transaction = sqlTemplate.startSqlTransaction();
-            int waitForLastCommit = insertList.size() - (commitLimit / 4);
             for (int i = 0; i < insertList.size(); i++) {
                 Data data = insertList.get(i);
                 insertData(transaction, data);
-                if (i % commitLimit == 0 && i < waitForLastCommit) {
-                    transaction.commit();
-                    transaction = sqlTemplate.startSqlTransaction();
-                }
             }
             transaction.commit();
+            transaction = null;
         } catch (Exception ex) {
             if (transaction != null) {
                 transaction.rollback();
             }
             throw ex;
         } finally {
-            close(transaction);
+            if (transaction != null) {
+                close(transaction);
+            }
         }
         return insertList.size();
     }
