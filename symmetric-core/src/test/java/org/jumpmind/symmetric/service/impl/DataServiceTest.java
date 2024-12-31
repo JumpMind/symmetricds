@@ -21,17 +21,23 @@
 package org.jumpmind.symmetric.service.impl;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.mockito.Mockito.doNothing;
+import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.reset;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.verifyNoMoreInteractions;
 import static org.mockito.Mockito.when;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
+import org.jumpmind.db.model.Column;
 import org.jumpmind.db.model.Table;
 import org.jumpmind.db.platform.DatabaseInfo;
 import org.jumpmind.db.platform.IDatabasePlatform;
@@ -39,6 +45,7 @@ import org.jumpmind.db.sql.DmlStatement;
 import org.jumpmind.db.sql.ISqlRowMapper;
 import org.jumpmind.db.sql.ISqlTemplate;
 import org.jumpmind.db.sql.ISqlTransaction;
+import org.jumpmind.db.sql.JdbcSqlTransaction;
 import org.jumpmind.db.sql.Row;
 import org.jumpmind.symmetric.AbstractSymmetricEngine;
 import org.jumpmind.symmetric.ISymmetricEngine;
@@ -47,19 +54,44 @@ import org.jumpmind.symmetric.db.AbstractSymmetricDialect;
 import org.jumpmind.symmetric.db.ISymmetricDialect;
 import org.jumpmind.symmetric.io.data.CsvUtils;
 import org.jumpmind.symmetric.io.data.DataEventType;
+import org.jumpmind.symmetric.load.IReloadGenerator;
+import org.jumpmind.symmetric.model.Channel;
 import org.jumpmind.symmetric.model.Data;
+import org.jumpmind.symmetric.model.DataGap;
+import org.jumpmind.symmetric.model.ExtractRequest;
+import org.jumpmind.symmetric.model.FileTrigger;
+import org.jumpmind.symmetric.model.FileTriggerRouter;
+import org.jumpmind.symmetric.model.Node;
+import org.jumpmind.symmetric.model.NodeGroupLink;
+import org.jumpmind.symmetric.model.NodeSecurity;
+import org.jumpmind.symmetric.model.ProcessInfo;
 import org.jumpmind.symmetric.model.Router;
 import org.jumpmind.symmetric.model.TableReloadRequest;
+import org.jumpmind.symmetric.model.TableReloadStatus;
 import org.jumpmind.symmetric.model.Trigger;
 import org.jumpmind.symmetric.model.TriggerHistory;
 import org.jumpmind.symmetric.model.TriggerRouter;
+import org.jumpmind.symmetric.service.ClusterConstants;
+import org.jumpmind.symmetric.service.IClusterService;
 import org.jumpmind.symmetric.service.IConfigurationService;
+import org.jumpmind.symmetric.service.IDataExtractorService;
 import org.jumpmind.symmetric.service.IDataService;
 import org.jumpmind.symmetric.service.IExtensionService;
+import org.jumpmind.symmetric.service.IFileSyncService;
+import org.jumpmind.symmetric.service.IGroupletService;
+import org.jumpmind.symmetric.service.IInitialLoadService;
+import org.jumpmind.symmetric.service.INodeService;
+import org.jumpmind.symmetric.service.IOutgoingBatchService;
 import org.jumpmind.symmetric.service.IParameterService;
+import org.jumpmind.symmetric.service.IPurgeService;
+import org.jumpmind.symmetric.service.ISequenceService;
+import org.jumpmind.symmetric.service.ITransformService;
 import org.jumpmind.symmetric.service.ITriggerRouterService;
+import org.jumpmind.symmetric.statistic.IStatisticManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvSource;
 import org.mockito.ArgumentMatchers;
 
 public class DataServiceTest {
@@ -98,7 +130,7 @@ public class DataServiceTest {
         dataService = new DataService(engine, extensionService);
         // request = mock(TableReloadRequest.class);
     }
-/*
+
     @Test
     public void testFindDataGaps2() throws Exception {
         final List<DataGap> gaps1 = new ArrayList<DataGap>();
@@ -408,7 +440,6 @@ public class DataServiceTest {
                 reloadRequests);
         dataService.getTableReloadRequest(0);
     }
-*/
 
 @Test
 public void recaptureStranded_Insert_ExistingRow() throws Exception {
@@ -644,38 +675,6 @@ public void recaptureStranded_Delete_MissingColumn_MissingRow() throws Exception
     assertEquals(0, recapturedCount);
 }
 
-    @Test
-    public void testRecaptureData() throws Exception {
-        String tableName = "sym_node_host", channelId = "heartbeat";
-        String colNames = "node_id,host_name,instance_id", pkNames = "node_id,host_name";
-
-        // setupRecapture(tableName, channelId, colNames, pkNames, DataEventType.UPDATE, "U1, bobo, abc", "U1, bobo", null, null);
-        // assertEquals(1, dataService.reCaptureData(1, 1));
-        // setupRecapture(tableName, channelId, colNames, pkNames, DataEventType.UPDATE, "U2, bobo, abc", "U2, bobo, EXTRA", null, null);
-        // assertEquals(0, dataService.reCaptureData(1, 1));
-        // setupRecapture(tableName, channelId, colNames, pkNames, DataEventType.UPDATE, "U3, bobo, abc", "MISSING", null, null);
-        // assertEquals(0, dataService.reCaptureData(1, 1));
-        // setupRecapture(tableName, channelId, colNames, pkNames, DataEventType.UPDATE, "U4, bobo, abc", "", null, null);
-        // assertEquals(0, dataService.reCaptureData(1, 1));
-        // setupRecapture(tableName, channelId, colNames, pkNames, DataEventType.UPDATE, "", "U5, bobo", null, "U5, bobo, abc");
-        // assertEquals(0, dataService.reCaptureData(1, 1));
-        // setupRecapture(tableName, channelId, colNames, pkNames, DataEventType.UPDATE, "", "", null, "U6, bobo, abc");
-        // assertEquals(0, dataService.reCaptureData(1, 1));
-        setupRecapture(tableName, channelId, colNames, pkNames, DataEventType.DELETE, null, "D1, bobo", null, "D1, bobo, abc");
-        assertEquals(0, dataService.reCaptureData(1, 1));
-        setupRecapture(tableName, channelId, colNames, pkNames, DataEventType.DELETE, null, "D2, bobo", "D2, bobo, abc", null);
-        assertEquals(1, dataService.reCaptureData(1, 1));
-        setupRecapture(tableName, channelId, colNames, pkNames, DataEventType.DELETE, null, "MISSING", "D3, bobo, abc", null);
-        assertEquals(0, dataService.reCaptureData(1, 1));
-        setupRecapture(tableName, channelId, colNames, pkNames, DataEventType.DELETE, null, "D4, bobo", "D4, MISSING", null);
-        assertEquals(0, dataService.reCaptureData(1, 1));
-        setupRecapture(tableName, channelId, colNames, pkNames, DataEventType.DELETE, null, "MISSING", null, "D5, bobo, abc");
-        assertEquals(0, dataService.reCaptureData(1, 1));
-        setupRecapture(tableName, channelId, colNames, pkNames, DataEventType.DELETE, null, null, "MISSING", null);
-        assertEquals(0, dataService.reCaptureData(1, 1));
-        setupRecapture(tableName, channelId, colNames, pkNames, DataEventType.DELETE, null, null, null, null);
-        assertEquals(0, dataService.reCaptureData(1, 1));
-    }
 
     @SuppressWarnings("unchecked")
     protected void setupRecapture(String tableName, String channelName, String columnNames, String pkNames, DataEventType dataEventType,
