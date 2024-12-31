@@ -3645,12 +3645,8 @@ public class DataService extends AbstractService implements IDataService {
                 insertList.add(recapturedData);
                 if (System.currentTimeMillis() - lastUpdateTimestamp > PROGRESS_LOG_UPDATE_DELAY_MS) {
                     lastUpdateTimestamp = System.currentTimeMillis();
-                    log.info("Recaptured stale data_id={}; table={} (from a list of {})", recapturedData.getDataId(), recapturedData.getTableName(), dataList
-                            .size());
-                    // TODO: Consider batching records for same table and trigger router together
-                    recaptureTransactionId = this.generateTransactionIdFromTimestamp("recapture-", Instant.now());
-                } else if (log.isDebugEnabled()) {
-                    log.debug("Recaptured stale data_id={}; table={}", recapturedData.getDataId(), recapturedData.getTableName());
+                    log.info("Recaptured stale data_id={}, table={}, list.size={}, transactionid={}", recapturedData.getDataId(), recapturedData.getTableName(),
+                            dataList.size(), recaptureTransactionId);
                 }
             }
             insertedCount = insertRecapturedData(insertList);
@@ -3708,6 +3704,9 @@ public class DataService extends AbstractService implements IDataService {
             String whereClause = recaptureWhereFilterForKeys(table, hist, keys, values);
             String actualRowData = null;
             String pkData = data.getPkData();
+            String dataSummary4Log = String.format("data_id=%d, event=%s, table=%s, PK: %s", data.getDataId(),
+                    data.getDataEventType().toString(), table.getFullyQualifiedTableName(), (whereClause.length() <= 100) ? whereClause
+                            : whereClause.substring(0, 100));
             // Look this record up:
             transaction = sqlTemplate.startSqlTransaction();
             actualRowData = getCsvDataFor(transaction, trigger, hist, whereClause, false);
@@ -3719,9 +3718,7 @@ public class DataService extends AbstractService implements IDataService {
             Data recapturedData = null;
             if (data.getDataEventType() == DataEventType.INSERT || data.getDataEventType() == DataEventType.UPDATE) {
                 if (actualRowData == null) {
-                    log.info("Skipped recapture of stale data because record no longer exists in database. data_id={}; table={}; Event type={}", data
-                            .getDataId(), data.getTableName(),
-                            data.getDataEventType().toString());
+                    log.info("Skipped recapture of stale data because record no longer exists in database. {}", dataSummary4Log);
                     return null;
                 }
                 recapturedData = data;
@@ -3730,19 +3727,18 @@ public class DataService extends AbstractService implements IDataService {
                 recapturedData.setDataEventType(DataEventType.UPDATE);
             } else if (data.getDataEventType() == DataEventType.DELETE) {
                 if (actualRowData != null) {
-                    log.info("Skipped recapture of stale data because record exists in database. data_id={}; table={}; Event type={}", data.getDataId(), data
-                            .getTableName(),
-                            data.getDataEventType().toString());
+                    log.info("Skipped recapture of stale data because record exists in database. {}", dataSummary4Log);
                     return null;
                 }
                 recapturedData = data;
             }
             // Double-check that stale data still conforms to table definition:
             if (!hasColumnDataIntegrity(recapturedData, hist)) {
-                log.warn("Unable to recapture stale data_id={} for table={} because row data no longer matches tables columns! Event type={}", data.getDataId(),
-                        fullTableName, data
-                                .getDataEventType().toString());
+                log.warn("Unable to recapture stale data because row values no longer match tables columns! {}", dataSummary4Log);
                 return null;
+            }
+            if (log.isDebugEnabled()) {
+                log.debug("Recaptured stale data. {}", dataSummary4Log);
             }
             return recapturedData;
         } catch (RuntimeException e) {
