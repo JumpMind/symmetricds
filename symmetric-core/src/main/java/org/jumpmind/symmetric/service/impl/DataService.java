@@ -3680,7 +3680,7 @@ public class DataService extends AbstractService implements IDataService {
         try {
             TriggerHistory hist = data.getTriggerHistory();
             if (hist == null) {
-                log.warn("Unable to recapture stale data_id={} because table={} no longer has trigger history! channel_id={})", data.getDataId(), data
+                log.warn("Unable to recapture stale data_id={} because table={} no longer has trigger history! channel_id={}", data.getDataId(), data
                         .getTableName(), data.getChannelId());
                 return null;
             }
@@ -3688,7 +3688,7 @@ public class DataService extends AbstractService implements IDataService {
             Set<TriggerRouter> triggerRouters = engine.getTriggerRouterService().getTriggerRouterForTableForCurrentNode(
                     hist.getSourceCatalogName(), hist.getSourceSchemaName(), hist.getSourceTableName(), false);
             if (triggerRouters == null || triggerRouters.size() <= 0) {
-                log.warn("Unable to recapture stale data_id={} because table={} no longer has a trigger-router! channel_id={})", data.getDataId(),
+                log.warn("Unable to recapture stale data_id={} because table={} no longer has a trigger-router! channel_id={}", data.getDataId(),
                         fullTableName, data.getChannelId());
                 return null;
             }
@@ -3697,6 +3697,7 @@ public class DataService extends AbstractService implements IDataService {
                 log.warn("Unable to recapture stale data_id={} because table={} was not found!)", data.getDataId(), fullTableName);
                 return null;
             }
+
             Trigger trigger = triggerRouters.iterator().next().getTrigger();
             table = table.copyAndFilterColumns(hist.getParsedColumnNames(), hist.getParsedPkColumnNames(), true, false);
             keys = recaptureKeysForData(table, data);
@@ -3705,43 +3706,45 @@ public class DataService extends AbstractService implements IDataService {
                 return null;
             }
             String whereClause = recaptureWhereFilterForKeys(table, hist, keys, values);
-            String rowData = null;
+            String actualRowData = null;
             String pkData = data.getPkData();
             // Look this record up:
             transaction = sqlTemplate.startSqlTransaction();
-            rowData = getCsvDataFor(transaction, trigger, hist, whereClause, false);
-            if (rowData != null && data.getDataEventType() == DataEventType.INSERT) {
+            actualRowData = getCsvDataFor(transaction, trigger, hist, whereClause, false);
+            if (actualRowData != null && data.getDataEventType() == DataEventType.INSERT) {
                 pkData = getCsvDataFor(transaction, trigger, hist, whereClause, true);
             }
             close(transaction);
             transaction = null;
+            Data recapturedData = null;
             if (data.getDataEventType() == DataEventType.INSERT || data.getDataEventType() == DataEventType.UPDATE) {
-                if (rowData == null) {
+                if (actualRowData == null) {
                     log.info("Skipped recapture of stale data because record no longer exists in database. data_id={}; table={}; Event type={}", data
                             .getDataId(), data.getTableName(),
                             data.getDataEventType().toString());
                     return null;
                 }
-                return new Data(
-                        data.getDataId(), pkData, rowData, DataEventType.UPDATE,
-                        data.getTableName(), data.getCreateTime(), data.getTriggerHistory(), data.getChannelId(),
-                        recaptureTransactionId, data.getSourceNodeId());
-            }
-            if (data.getDataEventType() == DataEventType.DELETE) {
-                if (rowData != null) {
+                recapturedData = data;
+                recapturedData.setRowData(actualRowData);
+                recapturedData.setPkData(pkData);
+                recapturedData.setDataEventType(DataEventType.UPDATE);
+            } else if (data.getDataEventType() == DataEventType.DELETE) {
+                if (actualRowData != null) {
                     log.info("Skipped recapture of stale data because record exists in database. data_id={}; table={}; Event type={}", data.getDataId(), data
                             .getTableName(),
                             data.getDataEventType().toString());
                     return null;
                 }
-                return new Data(
-                        data.getDataId(), pkData, null, data.getDataEventType(),
-                        data.getTableName(), data.getCreateTime(), data.getTriggerHistory(), data.getChannelId(),
-                        recaptureTransactionId, data.getSourceNodeId());
+                recapturedData = data;
             }
-            log.warn("Unable to recapture stale data_id={} for table={} because of unsupported event type={}", data.getDataId(), fullTableName, data
-                    .getDataEventType().toString());
-            return null; // Unsupported event type
+            // Double-check that stale data still conforms to table definition:
+            if (!hasColumnDataIntegrity(recapturedData, hist)) {
+                log.warn("Unable to recapture stale data_id={} for table={} because row data no longer matches tables columns! Event type={}", data.getDataId(),
+                        fullTableName, data
+                                .getDataEventType().toString());
+                return null;
+            }
+            return recapturedData;
         } catch (RuntimeException e) {
             if (table != null && keys != null) {
                 Column[] columns = table.getPrimaryKeyColumns();
@@ -3808,6 +3811,7 @@ public class DataService extends AbstractService implements IDataService {
         }
         return insertList.size();
     }
+
 
     /**
      * Looks up values of primary keys for specified data row object
