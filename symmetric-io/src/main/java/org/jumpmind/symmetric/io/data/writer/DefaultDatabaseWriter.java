@@ -280,7 +280,7 @@ public class DefaultDatabaseWriter extends AbstractDatabaseWriter {
             boolean isFindAndThrowException = false;
             try {
                 Conflict conflict = writerSettings.pickConflict(targetTable, batch);
-                values = (String[]) ArrayUtils.addAll(getRowData(data, CsvData.ROW_DATA),
+                values = ArrayUtils.addAll(getRowData(data, CsvData.ROW_DATA),
                         currentDmlStatement.getLookupKeyData(getLookupDataMap(data, conflict)));
                 long count = execute(data, values);
                 statistics.get(batch).increment(DataWriterStatisticConstants.INSERTCOUNT, count);
@@ -393,7 +393,7 @@ public class DefaultDatabaseWriter extends AbstractDatabaseWriter {
                 Iterator<Column> it = lookupKeys.iterator();
                 while (it.hasNext()) {
                     Column col = it.next();
-                    if ((getPlatform().isLob(col.getMappedTypeCode()) && data.isNoBinaryOldData())
+                    if ((getPlatform().isLob(col) && data.isNoBinaryOldData())
                             || !getPlatform().canColumnBeUsedInWhereClause(col)) {
                         it.remove();
                     }
@@ -550,7 +550,7 @@ public class DefaultDatabaseWriter extends AbstractDatabaseWriter {
                     Iterator<Column> it = lookupKeys.iterator();
                     while (it.hasNext()) {
                         Column col = it.next();
-                        if ((getPlatform().isLob(col.getMappedTypeCode()) && data.isNoBinaryOldData())
+                        if ((getPlatform().isLob(col) && data.isNoBinaryOldData())
                                 || !getPlatform().canColumnBeUsedInWhereClause(col)) {
                             it.remove();
                         }
@@ -587,10 +587,10 @@ public class DefaultDatabaseWriter extends AbstractDatabaseWriter {
                     }
                     prepare();
                 }
-                rowData = (String[]) changedColumnValueList
+                rowData = changedColumnValueList
                         .toArray(new String[changedColumnValueList.size()]);
                 lookupDataMap = lookupDataMap == null ? getLookupDataMap(data, conflict) : lookupDataMap;
-                String[] values = (String[]) ArrayUtils.addAll(rowData,
+                String[] values = ArrayUtils.addAll(rowData,
                         currentDmlStatement.getLookupKeyData(lookupDataMap));
                 try {
                     long count = execute(data, values);
@@ -1075,6 +1075,7 @@ public class DefaultDatabaseWriter extends AbstractDatabaseWriter {
     protected List<String> getSqlStatements(String script) {
         List<String> sqlStatements = new ArrayList<String>();
         SqlScriptReader scriptReader = new SqlScriptReader(new StringReader(script));
+        scriptReader.setStripOutComments(writerSettings.isStripOutCommentsInScripts());
         try {
             String sql = scriptReader.readSqlStatement();
             while (sql != null) {
@@ -1158,7 +1159,7 @@ public class DefaultDatabaseWriter extends AbstractDatabaseWriter {
              * Old data isn't captured for some lob fields. When both values are null, then we always have to update because we don't know if the lob field was
              * previously null.
              */
-            boolean containsEmptyLobColumn = getPlatform().isLob(column.getMappedTypeCode())
+            boolean containsEmptyLobColumn = getPlatform().isLob(column)
                     && StringUtils.isBlank(oldData[targetColumnIndex]);
             needsUpdated = !StringUtils.equals(rowData[targetColumnIndex], oldData[targetColumnIndex])
                     || data.getParsedData(CsvData.OLD_DATA) == null
@@ -1303,6 +1304,7 @@ public class DefaultDatabaseWriter extends AbstractDatabaseWriter {
         return currentDmlStatement;
     }
 
+    @Override
     public DatabaseWriterSettings getWriterSettings() {
         return writerSettings;
     }
@@ -1340,6 +1342,7 @@ public class DefaultDatabaseWriter extends AbstractDatabaseWriter {
             Row row = null;
             List<Row> list = transaction.query(sqlStatement.getSql(),
                     new ISqlRowMapper<Row>() {
+                        @Override
                         public Row mapRow(Row row) {
                             return row;
                         }

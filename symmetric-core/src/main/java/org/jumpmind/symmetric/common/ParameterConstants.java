@@ -234,6 +234,7 @@ final public class ParameterConstants {
     public final static String DATA_LOADER_TREAT_BIT_AS_INTEGER = "db.treat.bit.as.integer.enabled";
     public final static String DATA_LOADER_USE_PRIMARY_KEYS_FROM_SOURCE = "dataloader.use.primary.keys.from.source";
     public final static String DATA_LOADER_IGNORE_SQL_EVENT_ERRORS = "dataloader.ignore.sql.event.errors";
+    public final static String DATA_LOADER_SQL_EVENT_STRIP_COMMENTS = "dataloader.sql.event.strip.comments";
     public final static String DATA_LOADER_LOG_SQL_PARAMS_ON_ERROR = "dataloader.log.sql.params.on.error";
     public final static String DATA_RELOAD_IS_BATCH_INSERT_TRANSACTIONAL = "datareload.batch.insert.transactional";
     public final static String DATA_EXTRACTOR_ENABLED = "dataextractor.enable";

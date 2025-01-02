@@ -68,20 +68,23 @@ public class MsSql2000DatabasePlatform extends AbstractJdbcDatabasePlatform {
         return new MsSqlJdbcSqlTemplate(dataSource, settings, getDatabaseInfo());
     }
 
+    @Override
     public String getName() {
         return DatabaseNamesConstants.MSSQL2000;
     }
 
+    @Override
     public String getDefaultCatalog() {
         if (StringUtils.isBlank(defaultCatalog)) {
-            defaultCatalog = (String) getSqlTemplate().queryForObject("select DB_NAME()", String.class);
+            defaultCatalog = getSqlTemplate().queryForObject("select DB_NAME()", String.class);
         }
         return defaultCatalog;
     }
 
+    @Override
     public String getDefaultSchema() {
         if (StringUtils.isBlank(defaultSchema)) {
-            defaultSchema = (String) getSqlTemplate().queryForObject("select current_user", String.class);
+            defaultSchema = getSqlTemplate().queryForObject("select current_user", String.class);
         }
         return defaultSchema;
     }
@@ -92,10 +95,34 @@ public class MsSql2000DatabasePlatform extends AbstractJdbcDatabasePlatform {
     }
 
     @Override
-    public boolean isClob(int type) {
-        return super.isClob(type) ||
+    public boolean isClob(Column column) {
+        if (isVarcharMax(column)) {
+            return false;
+        }
+        return super.isClob(column) || isText(column);
+    }
+
+    /***
+     * Helps detect SQL Server-specific NVARCHAR(MAX), VARCHAR(MAX) column types. They should be treated as a regular string type, not as "large objects".
+     */
+    public boolean isVarcharMax(Column column) {
+        int mappedTypeCode = column.getMappedTypeCode();
+        int size = column.getSizeAsInt();
+        String jdbcTypeName = column.getJdbcTypeName();
+        if (mappedTypeCode == Types.LONGVARCHAR
+                && (jdbcTypeName.equalsIgnoreCase("NVARCHAR") && size > MsSql2005DdlBuilder.NVARCHARMAX_LIMIT
+                        || jdbcTypeName.equalsIgnoreCase("VARCHAR") && size > MsSql2005DdlBuilder.VARCHARMAX_LIMIT)) {
+            return true;
+        }
+        return false;
+    }
+
+    /***
+     * Helps detect SQL Server-specific NTEXT, TEXT column types. They should be treated as "large objects".
+     */
+    public boolean isText(Column column) {
         // SQL-Server ntext binary type
-                type == -10;
+        return column.getMappedTypeCode() == -10;
     }
 
     @Override
@@ -103,7 +130,7 @@ public class MsSql2000DatabasePlatform extends AbstractJdbcDatabasePlatform {
         if (column.getMappedTypeCode() == Types.VARBINARY && column.getSizeAsInt() > 8000) {
             return false;
         }
-        return !isLob(column.getJdbcTypeCode()) && super.canColumnBeUsedInWhereClause(column);
+        return !isLob(column) && super.canColumnBeUsedInWhereClause(column);
     }
 
     @Override

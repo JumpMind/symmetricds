@@ -48,20 +48,20 @@ import org.jumpmind.db.sql.ISqlTemplate;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
 import com.vaadin.flow.component.Component;
 import com.vaadin.flow.component.ComponentEventListener;
 import com.vaadin.flow.component.button.Button;
 import com.vaadin.flow.component.html.Anchor;
 import com.vaadin.flow.component.html.Span;
 import com.vaadin.flow.component.notification.NotificationVariant;
+import com.vaadin.flow.component.orderedlayout.FlexComponent.Alignment;
+import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 import com.vaadin.flow.component.select.Select;
 import com.vaadin.flow.component.textfield.TextArea;
 import com.vaadin.flow.component.upload.Receiver;
 import com.vaadin.flow.component.upload.SucceededEvent;
 import com.vaadin.flow.component.upload.Upload;
 import com.vaadin.flow.server.StreamResource;
-import com.vaadin.flow.component.orderedlayout.VerticalLayout;
 
 public class ReadOnlyTextAreaDialog extends ResizableDialog {
     private static final long serialVersionUID = 1L;
@@ -109,7 +109,7 @@ public class ReadOnlyTextAreaDialog extends ResizableDialog {
             displayBox.setLabel("Display As");
             displayBox.setEmptySelectionAllowed(false);
             displayBox.setValue("Hex");
-            displayBox.addValueChangeListener(event -> updateTextField((String) displayBox.getValue(), value));
+            displayBox.addValueChangeListener(event -> updateTextField(displayBox.getValue(), value));
             leftComponentList.add(displayBox);
         }
         if (table != null && isLob) {
@@ -125,7 +125,7 @@ public class ReadOnlyTextAreaDialog extends ResizableDialog {
         textField.setValue(value);
         textField.addValueChangeListener(event -> {
             if (displayBox != null) {
-                updateTextField((String) displayBox.getValue(), value);
+                updateTextField(displayBox.getValue(), value);
             } else {
                 textField.setValue(value);
             }
@@ -213,7 +213,7 @@ public class ReadOnlyTextAreaDialog extends ResizableDialog {
         ISqlTemplate sqlTemplate = platform.getSqlTemplate();
         String sql = buildLobSelect(table.getPrimaryKeyColumns());
         byte[] array;
-        if (platform.isBlob(column.getMappedTypeCode())) {
+        if (platform.isBlob(column)) {
             array = sqlTemplate.queryForBlob(sql, column.getJdbcTypeCode(), column.getJdbcTypeName(), primaryKeys);
         } else {
             String results = sqlTemplate.queryForClob(sql, column.getJdbcTypeCode(), column.getJdbcTypeName(), primaryKeys);
@@ -320,6 +320,7 @@ public class ReadOnlyTextAreaDialog extends ResizableDialog {
             return out;
         }
 
+        @Override
         public void onComponentEvent(SucceededEvent event) {
             log.info("File received successfully. Updating database");
             String sql = buildLobUpdate(table.getPrimaryKeyColumns());
@@ -331,7 +332,7 @@ public class ReadOnlyTextAreaDialog extends ResizableDialog {
                 con.setAutoCommit(false);
                 ps = con.prepareStatement(sql);
                 InputStream stream = new FileInputStream(file);
-                ps.setBinaryStream(1, (InputStream) stream, (int) file.length());
+                ps.setBinaryStream(1, stream, (int) file.length());
                 for (int i = 0; i < primaryKeys.length; i++) {
                     ps.setObject(i + 2, primaryKeys[i], table.getPrimaryKeyColumns()[i].getMappedTypeCode());
                 }

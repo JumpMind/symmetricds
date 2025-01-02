@@ -381,11 +381,8 @@ public class AseDdlBuilder extends AbstractDdlBuilder {
             TableChange change = changeIt.next();
             if (change instanceof AddColumnChange) {
                 AddColumnChange addColumnChange = (AddColumnChange) change;
-                // Sybase can only add not insert columns
-                if (addColumnChange.isAtEnd()) {
-                    processChange(currentModel, desiredModel, addColumnChange, ddl);
-                    changeIt.remove();
-                }
+                processChange(currentModel, desiredModel, addColumnChange, ddl);
+                changeIt.remove();
             } else if (change instanceof CopyColumnValueChange) {
                 CopyColumnValueChange copyColumnChange = (CopyColumnValueChange) change;
                 processChange(currentModel, desiredModel, copyColumnChange, ddl);

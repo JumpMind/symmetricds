@@ -59,8 +59,8 @@ import org.jumpmind.db.model.ForeignKey;
 import org.jumpmind.db.model.IIndex;
 import org.jumpmind.db.model.Table;
 import org.jumpmind.db.model.Trigger;
-import org.jumpmind.db.model.TypeMap;
 import org.jumpmind.db.model.Trigger.TriggerType;
+import org.jumpmind.db.model.TypeMap;
 import org.jumpmind.db.platform.AbstractJdbcDdlReader;
 import org.jumpmind.db.platform.DatabaseMetaDataWrapper;
 import org.jumpmind.db.platform.IDatabasePlatform;
@@ -171,7 +171,7 @@ public class InterbaseDdlReader extends AbstractJdbcDdlReader {
                     String defaultValue = defaultBytes != null ? new String(defaultBytes, Charset.defaultCharset()) : null;
                     if (!rs.wasNull() && (defaultValue != null)) {
                         defaultValue = defaultValue.trim();
-                        if (defaultValue.startsWith("DEFAULT ")) {
+                        if (defaultValue.toUpperCase().startsWith("DEFAULT ")) {
                             defaultValue = defaultValue.substring("DEFAULT ".length());
                         }
                         column.setDefaultValue(defaultValue);

@@ -397,4 +397,8 @@ public class MockNodeService implements INodeService {
     public boolean setInitialLoadEnded(ISqlTransaction transaction, String nodeId) {
         return false;
     }
+
+    @Override
+    public void deleteNodeHostInstance(String nodeId, String instanceId) {
+    }
 }

@@ -84,10 +84,12 @@ public class ExtractDataReader implements IDataReader {
         isSybaseASE = platform.getName().equals(DatabaseNamesConstants.ASE);
     }
 
+    @Override
     public void open(DataContext context) {
         this.dataContext = context;
     }
 
+    @Override
     public Batch nextBatch() {
         closeCurrentSource();
         if (this.sourcesToUse.size() > 0) {
@@ -99,6 +101,7 @@ public class ExtractDataReader implements IDataReader {
         return this.batch;
     }
 
+    @Override
     public Table nextTable() {
         this.table = null;
         if (this.currentSource != null) {
@@ -131,6 +134,7 @@ public class ExtractDataReader implements IDataReader {
         return sourceString;
     }
 
+    @Override
     public CsvData nextData() {
         CsvData nextData = nextDataFromSource();
         if (nextData != null && filters != null && filters.size() != 0) {
@@ -179,6 +183,7 @@ public class ExtractDataReader implements IDataReader {
         return dataToReturn;
     }
 
+    @Override
     public void close() {
         closeCurrentSource();
         this.batch = null;
@@ -193,6 +198,7 @@ public class ExtractDataReader implements IDataReader {
         this.data = null;
     }
 
+    @Override
     public Map<Batch, Statistics> getStatistics() {
         return statistics;
     }
@@ -223,7 +229,7 @@ public class ExtractDataReader implements IDataReader {
                 if (row != null) {
                     for (Column lobColumn : lobColumns) {
                         String valueForCsv = null;
-                        if (platform.isBlob(lobColumn.getMappedTypeCode())) {
+                        if (platform.isBlob(lobColumn)) {
                             byte[] binaryData = row.getBytes(lobColumn.getName());
                             if (binaryData != null) {
                                 if (isUniType(lobColumn.getJdbcTypeName())) {
@@ -374,7 +380,7 @@ public class ExtractDataReader implements IDataReader {
             row = new Row(lobColumns.size());
             for (Column lobColumn : lobColumns) {
                 if (lobColumn.isRequired()) {
-                    if (platform.isBlob(lobColumn.getMappedTypeCode())) {
+                    if (platform.isBlob(lobColumn)) {
                         row.put(lobColumn.getName(), new byte[0]);
                     } else {
                         row.put(lobColumn.getName(), "");
