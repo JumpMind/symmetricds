@@ -261,10 +261,10 @@ public interface ITriggerRouterService {
 
     public Map<Integer, List<TriggerRouter>> fillTriggerRoutersByHistIdAndSortHist(
             String sourceNodeGroupId, String targetNodeGroupId, String targetExternalId, List<TriggerHistory> triggerHistories,
-            List<TriggerRouter> triggerRouters);
+            List<TriggerRouter> triggerRouters, boolean sortByFk);
 
     public Map<Integer, List<TriggerRouter>> fillTriggerRoutersByHistIdAndSortHist(
-            String sourceNodeGroupId, String targetNodeGroupId, String targetExternalId, List<TriggerHistory> triggerHistories);
+            String sourceNodeGroupId, String targetNodeGroupId, String targetExternalId, List<TriggerHistory> triggerHistories, boolean sortByFk);
 
     public Map<Integer, List<TriggerRouter>> fillTriggerRoutersByHistId(
             String sourceNodeGroupId, String targetNodeGroupId, String targetExternalId, List<TriggerHistory> triggerHistories);

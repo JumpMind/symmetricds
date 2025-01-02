@@ -122,4 +122,6 @@ public interface ICacheManager {
     public Map<NodeGroupLink, Map<TransformPoint, List<TransformTableNodeGroupLink>>> getTransformCache();
 
     public void flushTransformCache();
+
+    public Map<String, Collection<String>> getReadyQueues(boolean refreshCache);
 }

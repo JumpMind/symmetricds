@@ -155,6 +155,7 @@ final public class ParameterConstants {
     public final static String INITIAL_LOAD_CONCAT_CSV_IN_SQL_ENABLED = "initial.load.concat.csv.in.sql.enabled";
     public final static String INITIAL_LOAD_USE_COLUMN_TEMPLATES_ENABLED = "initial.load.use.column.templates.enabled";
     public final static String INITIAL_LOAD_EXTRACT_THREAD_COUNT_PER_SERVER = "initial.load.extract.thread.per.server.count";
+    public final static String INITIAL_LOAD_EXTRACT_MAX_PROCESS_TIME_MS = "initial.load.extract.max.process.time.ms";
     public final static String INITIAL_LOAD_EXTRACT_TIMEOUT_MS = "initial.load.extract.timeout.ms";
     public final static String INITIAL_LOAD_EXTRACT_USE_TWO_PASS_LOB = "initial.load.extract.use.two.pass.lob";
     public final static String INITIAL_LOAD_EXTRACT_JOB_START = "start.initial.load.extract.job";
@@ -166,6 +167,8 @@ final public class ParameterConstants {
     public final static String INITIAL_LOAD_DEFER_CREATE_CONSTRAINTS = "initial.load.defer.create.constraints";
     public final static String INITIAL_LOAD_DEFER_TABLE_LOGGING = "initial.load.defer.table.logging";
     public final static String INITIAL_LOAD_RECURSION_SELF_FK = "initial.load.recursion.self.fk";
+    public final static String INITIAL_LOAD_QUEUE_SYNC_THREAD_COUNT = "initial.load.queue.sync.thread.count";
+    public final static String INITIAL_LOAD_QUEUE_USE_ALL_THREADS = "initial.load.queue.use.all.threads";
     public final static String EXTRACT_CHECK_ROW_SIZE = "extract.check.row.size";
     public final static String EXTRACT_ROW_MAX_LENGTH = "extract.row.max.length";
     public final static String EXTRACT_ROW_CAPTURE_TIME = "extract.row.capture.time";
@@ -276,6 +279,7 @@ final public class ParameterConstants {
     public final static String CACHE_TIMEOUT_NODE_IN_MS = "cache.node.time.ms";
     public final static String CACHE_TIMEOUT_TRIGGER_ROUTER_IN_MS = "cache.trigger.router.time.ms";
     public final static String CACHE_TIMEOUT_CHANNEL_IN_MS = "cache.channel.time.ms";
+    public final static String CACHE_TIMEOUT_READY_QUEUE_IN_MS = "cache.ready.queue.time.ms";
     public final static String CACHE_TIMEOUT_NODE_GROUP_LINK_IN_MS = "cache.node.group.link.time.ms";
     public final static String CACHE_TIMEOUT_TRANSFORM_IN_MS = "cache.transform.time.ms";
     public final static String CACHE_TIMEOUT_LOAD_FILTER_IN_MS = "cache.load.filter.time.ms";
@@ -470,6 +474,7 @@ final public class ParameterConstants {
     public final static String COMPARE_LOCK_TIMEOUT_MS = "compare.lock.timeout.ms";
     public final static String CAPTURE_TYPE_TIME_BASED = "time.based.capture";
     public final static String FILESYNCTRACKER_MAX_ROWS_BEFORE_COMMIT = "filesynctracker.max.rows.before.commit";
+    public final static String SYNC_USE_READY_QUEUES = "sync.use.ready.queues";
 
     public static Map<String, ParameterMetaData> getParameterMetaData() {
         return parameterMetaData;

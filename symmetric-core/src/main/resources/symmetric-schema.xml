@@ -154,6 +154,8 @@
        	<column name="total_rows" type="BIGINT" required="false" description="The rows in this table to be extracted" />
        	<column name="loaded_time" type="TIMESTAMP"  description="Timestamp when this table was loaded." />
         <column name="parent_request_id" type="BIGINT" required="true" default="0" description="Parent request_id that will actually handle the extract for this request." />
+        <column name="extract_thread_id" type="INTEGER" required="false" description="Thread number within dynamic queue assigned for extraction" />
+        <column name="load_thread_id" type="INTEGER" required="false" description="Thread number within dynamic queue assigned for loading over push/pull" />
         <column name="last_update_time" type="TIMESTAMP"  description="Timestamp when a process last updated this entry." />
         <column name="create_time" type="TIMESTAMP"  description="Timestamp when this entry was created." />
         <index name="idx_er_ld_src_nd">
@@ -657,6 +659,7 @@
         <column name="transform_extract_millis" type="INTEGER" required="true" default="0" description="Not implemented. The number of milliseconds spent transforming the data on the extract side." />
         <column name="transform_load_millis" type="INTEGER" required="true" default="0" description="Not implemented. The number of milliseconds spent transforming the data on the load side." />
 		<column name="load_id" type="BIGINT" description="An id that ties multiple batches together to identify them as being part of an initial load." />
+		<column name="thread_id" type="INTEGER" required="false" description="Thread number within dynamic queue assigned for loading over push/pull" />
 		<column name="common_flag"  type="BOOLEANINT" size="1" default="0" description="A flag that indicates that the data in this batch is shared by other nodes (they will have the same batch_id).  Shared batches will be extracted to a common location." />
 		<column name="fallback_insert_count" type="INTEGER" required="true" default="0" description="The number of times an update was turned into an insert because the data was not already in the target database." />
         <column name="fallback_update_count" type="INTEGER" required="true" default="0" description="The number of times an insert was turned into an update because a data row already existed in the target database." />

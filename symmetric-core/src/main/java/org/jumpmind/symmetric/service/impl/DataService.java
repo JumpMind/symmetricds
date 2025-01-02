@@ -504,15 +504,21 @@ public class DataService extends AbstractService implements IDataService {
             sql = FormatUtils.replace("isBulkLoaded", isBulkLoaded ? "1" : "0", sql);
             count = transaction.prepareAndExecute(sql);
         }
-        if (count == 0) {
-            log.warn("No load status updated for source node {} load ID {} batch ID {}", sourceNodeId, loadId, batchId);
-        }
-        List<TableReloadStatus> status = transaction.query(getSql("selectTableReloadStatusByLoadIdSourceNodeId"),
+        TableReloadStatus status = null;
+        List<TableReloadStatus> statuses = transaction.query(getSql("selectTableReloadStatusByLoadIdSourceNodeId"),
                 new TableReloadStatusMapper(), new Object[] { loadId, sourceNodeId }, new int[] { idType, Types.VARCHAR });
-        if (status != null && status.size() > 0 && count > 0) {
-            return status.get(0);
+        if (statuses != null && statuses.size() > 0) {
+            status = statuses.get(0);
         }
-        return null;
+        if (count == 0) {
+            if (status != null && !status.isCompleted()) {
+                log.warn("No load status updated for source node {} load ID {} batch ID {}", sourceNodeId, loadId, batchId);
+            } else if (status == null) {
+                log.warn("No load status found for source node {} load ID {} batch ID {}", sourceNodeId, loadId, batchId);
+            }
+            status = null;
+        }
+        return status;
     }
 
     @Override
@@ -992,7 +998,9 @@ public class DataService extends AbstractService implements IDataService {
                             }
                         }
                         processInfo.setCurrentLoadId(loadId);
+                        String createBy = reverse ? nodeSecurity.getRevInitialLoadCreateBy() : nodeSecurity.getInitialLoadCreateBy();
                         if (reloadRequests != null && reloadRequests.size() > 0) {
+                            createBy = reloadRequests.get(0).getLastUpdateBy();
                             createTableReloadStatus(platform.supportsMultiThreadedTransactions() ? null : transaction,
                                     loadId, isFullLoad, reloadRequests.get(0).getSourceNodeId(), reloadRequests.get(0).getTargetNodeId());
                             for (TableReloadRequest request : reloadRequests) {
@@ -1004,8 +1012,6 @@ public class DataService extends AbstractService implements IDataService {
                             close(transaction);
                             transaction = platform.getSqlTemplate().startSqlTransaction();
                         }
-                        String createBy = reverse ? nodeSecurity.getRevInitialLoadCreateBy()
-                                : nodeSecurity.getInitialLoadCreateBy();
                         List<TriggerHistory> triggerHistories = new ArrayList<TriggerHistory>();
                         if (isFullLoad || isChannelLoad) {
                             triggerHistories.addAll(activeHistories);
@@ -1028,9 +1034,11 @@ public class DataService extends AbstractService implements IDataService {
                                         .getActiveTriggerHistories(new Trigger(reloadRequest.getTriggerId(), null)));
                             }
                         }
+                        boolean sortByFk = !(isFullLoad && parameterService.is(ParameterConstants.INITIAL_LOAD_DEFER_CREATE_CONSTRAINTS, false) &&
+                                reloadRequests != null && reloadRequests.size() > 0 && reloadRequests.get(0).isCreateTable());
                         Map<Integer, List<TriggerRouter>> triggerRoutersByHistoryId = triggerRouterService
                                 .fillTriggerRoutersByHistIdAndSortHist(sourceNode.getNodeGroupId(),
-                                        targetNode.getNodeGroupId(), targetNode.getExternalId(), triggerHistories, triggerRouters);
+                                        targetNode.getNodeGroupId(), targetNode.getExternalId(), triggerHistories, triggerRouters, sortByFk);
                         if (isFullLoad) {
                             if (!reverse) {
                                 nodeService.setInitialLoadEnabled(transaction, nodeIdRecord, false, true, loadId, createBy);
@@ -2550,7 +2558,7 @@ public class DataService extends AbstractService implements IDataService {
                 catalogName, schemaName, tableName);
         Map<Integer, List<TriggerRouter>> triggerRoutersByHistoryId = triggerRouterService
                 .fillTriggerRoutersByHistIdAndSortHist(sourceNode.getNodeGroupId(),
-                        targetNode.getNodeGroupId(), targetNode.getExternalId(), triggerHistories);
+                        targetNode.getNodeGroupId(), targetNode.getExternalId(), triggerHistories, false);
         int eventCount = 0;
         ISqlTransaction transaction = null;
         try {

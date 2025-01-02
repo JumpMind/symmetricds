@@ -147,6 +147,7 @@ public class DataServiceTest {
         dataService.insertTableReloadRequest(request);
     }
 
+    @SuppressWarnings("unchecked")
     @ParameterizedTest
     @CsvSource({ "" + 0 + "", "" + 1 + "", "" + 2 + "" })
     void testInsertReloadEvents(int scenario) throws Exception {
@@ -291,8 +292,8 @@ public class DataServiceTest {
         when(nodeSecurity.getInitialLoadCreateBy()).thenReturn("test user");
         when(triggerRouterService.getActiveTriggerHistories((Trigger) ArgumentMatchers.any())).thenReturn(triggerHistories);
         when(triggerRouterService.fillTriggerRoutersByHistIdAndSortHist(ArgumentMatchers.anyString(),
-                ArgumentMatchers.anyString(), ArgumentMatchers.anyString(), ArgumentMatchers.anyList(), ArgumentMatchers.anyList())).thenReturn(
-                        triggerRouterByHist);
+                ArgumentMatchers.anyString(), ArgumentMatchers.anyString(), ArgumentMatchers.anyList(), ArgumentMatchers.anyList(),
+                ArgumentMatchers.anyBoolean())).thenReturn(triggerRouterByHist);
         when(engine.getConfigurationService()).thenReturn(configurationService);
         when(configurationService.getChannels(false)).thenReturn(channelMap);
         when(engine.getConfigurationService().getChannels(false)).thenReturn(channelMap);
@@ -382,9 +383,6 @@ public class DataServiceTest {
         sourceNode.setNodeId("server");
         TriggerHistory triggerHistory = new TriggerHistory("testTable", "Id", "Id,age,weight");
         triggerHistory.setTriggerId("testTable");
-        NodeGroupLink link = new NodeGroupLink("server", "client");
-        Trigger trigger = new Trigger("testTable", "default");
-        Router router = new Router("testRouter", link);
         TriggerHistory triggerHist = new TriggerHistory("sym_node_host", "node_id,host_name",
                 "node_id,host_name,instance_id,ip_address,os_user,os_name,os_arch,os_version,available_processors,free_memory_bytes,total_memory_bytes,max_memory_bytes,java_version,java_vendor,jdbc_version,symmetric_version,timezone_offset,heartbeat_time,last_restart_time,create_time");
         triggerHist.setTriggerId("sym_node_host");
@@ -418,6 +416,7 @@ public class DataServiceTest {
         }
     }
 
+    @SuppressWarnings("unchecked")
     @Test
     void testGetTableReloadRequest() throws Exception {
         // actual variables

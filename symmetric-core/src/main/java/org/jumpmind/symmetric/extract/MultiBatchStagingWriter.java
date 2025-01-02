@@ -335,10 +335,12 @@ public class MultiBatchStagingWriter implements IDataWriter {
         /*
          * Update the last update time so the batch isn't purged prematurely
          */
-        for (OutgoingBatch batch : finishedBatches) {
-            IStagedResource resource = getStagedResource(batch);
-            if (resource != null) {
-                resource.refreshLastUpdateTime();
+        if (engine.getParameterService().is(ParameterConstants.STREAM_TO_FILE_PURGE_ON_TTL_ENABLED, false)) {
+            for (OutgoingBatch batch : finishedBatches) {
+                IStagedResource resource = getStagedResource(batch);
+                if (resource != null) {
+                    resource.refreshLastUpdateTime();
+                }
             }
         }
     }

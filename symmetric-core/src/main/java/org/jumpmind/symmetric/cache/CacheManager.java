@@ -53,6 +53,7 @@ public class CacheManager implements ICacheManager {
     volatile private GroupletCache groupletCache;
     volatile private LoadFilterCache loadFilterCache;
     volatile private TransformCache transformCache;
+    volatile private OutgoingBatchCache outgoingBatchCache;
 
     public CacheManager(ISymmetricEngine engine) {
         this.engine = engine;
@@ -133,6 +134,16 @@ public class CacheManager implements ICacheManager {
             synchronized (constructorCreator) {
                 if (transformCache == null) {
                     transformCache = new TransformCache(engine);
+                }
+            }
+        }
+    }
+
+    private void initializeOutgoingBatchCache() {
+        if (outgoingBatchCache == null) {
+            synchronized (constructorCreator) {
+                if (outgoingBatchCache == null) {
+                    outgoingBatchCache = new OutgoingBatchCache(engine);
                 }
             }
         }
@@ -380,5 +391,11 @@ public class CacheManager implements ICacheManager {
     public void flushTransformCache() {
         initializeTransformCache();
         transformCache.flushTransformCache();
+    }
+
+    @Override
+    public Map<String, Collection<String>> getReadyQueues(boolean refreshCache) {
+        initializeOutgoingBatchCache();
+        return outgoingBatchCache.getReadyQueues(refreshCache);
     }
 }

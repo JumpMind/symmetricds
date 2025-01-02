@@ -20,15 +20,16 @@
  */
 package org.jumpmind.symmetric.service;
 
+import java.util.Collection;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
 
 import org.jumpmind.db.sql.ISqlTransaction;
+import org.jumpmind.symmetric.model.AbstractBatch.Status;
 import org.jumpmind.symmetric.model.BatchId;
 import org.jumpmind.symmetric.model.IncomingBatch;
 import org.jumpmind.symmetric.model.IncomingBatchSummary;
-import org.jumpmind.symmetric.model.AbstractBatch.Status;
 
 /**
  * This service provides an API to access to the incoming batch table.
@@ -95,4 +96,8 @@ public interface IIncomingBatchService {
     public Map<String, Date> findLastUpdatedByChannel();
 
     public List<BatchId> getAllBatches();
+
+    public Collection<String> getReadyQueues(String sourceNodeId);
+
+    public void setReadyQueues(String sourceNodeId, Collection<String> queues);
 }

@@ -320,8 +320,7 @@ abstract public class AbstractSymmetricEngine implements ISymmetricEngine {
         this.loadFilterService = new LoadFilterService(this, symmetricDialect);
         this.groupletService = new GroupletService(this);
         this.triggerRouterService = new TriggerRouterService(this);
-        this.outgoingBatchService = new OutgoingBatchService(parameterService, symmetricDialect,
-                nodeService, configurationService, sequenceService, clusterService, extensionService);
+        this.outgoingBatchService = new OutgoingBatchService(this);
         this.routerService = buildRouterService();
         this.nodeCommunicationService = buildNodeCommunicationService(clusterService, nodeService, parameterService, configurationService, symmetricDialect);
         this.incomingBatchService = new IncomingBatchService(parameterService, symmetricDialect, clusterService);
@@ -332,12 +331,8 @@ abstract public class AbstractSymmetricEngine implements ISymmetricEngine {
         this.dataLoaderService = new DataLoaderService(this);
         this.registrationService = new RegistrationService(this);
         this.acknowledgeService = new AcknowledgeService(this);
-        this.pushService = new PushService(parameterService, symmetricDialect,
-                dataExtractorService, acknowledgeService, registrationService, transportManager, nodeService,
-                clusterService, nodeCommunicationService, statisticManager, configurationService, extensionService);
-        this.pullService = new PullService(parameterService, symmetricDialect,
-                nodeService, dataLoaderService, registrationService, clusterService, nodeCommunicationService,
-                configurationService, extensionService, statisticManager);
+        this.pushService = new PushService(this);
+        this.pullService = new PullService(this);
         this.offlinePushService = new OfflinePushService(parameterService, symmetricDialect,
                 dataExtractorService, acknowledgeService, offlineTransportManager, nodeService,
                 clusterService, nodeCommunicationService, statisticManager, configurationService, extensionService);

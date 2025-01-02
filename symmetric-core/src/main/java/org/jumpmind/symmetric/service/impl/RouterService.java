@@ -63,10 +63,10 @@ import org.jumpmind.symmetric.model.Node;
 import org.jumpmind.symmetric.model.NodeChannel;
 import org.jumpmind.symmetric.model.NodeCommunication;
 import org.jumpmind.symmetric.model.NodeCommunication.CommunicationType;
-import org.jumpmind.symmetric.model.ProcessInfo.ProcessStatus;
 import org.jumpmind.symmetric.model.NodeGroupLink;
 import org.jumpmind.symmetric.model.OutgoingBatch;
 import org.jumpmind.symmetric.model.ProcessInfo;
+import org.jumpmind.symmetric.model.ProcessInfo.ProcessStatus;
 import org.jumpmind.symmetric.model.ProcessInfoKey;
 import org.jumpmind.symmetric.model.ProcessType;
 import org.jumpmind.symmetric.model.RemoteNodeStatus;
@@ -1035,9 +1035,9 @@ public class RouterService extends AbstractService implements IRouterService, IN
                 context.setNeedsCommitted(true);
             }
         } else if (eventType == DataEventType.CREATE) {
-            if (dataMetaData.getData().getPkData() != null) {
+            if (StringUtils.isNotBlank(dataMetaData.getData().getTransactionId())) {
                 try {
-                    loadId = Long.parseLong(dataMetaData.getData().getPkData());
+                    loadId = Long.parseLong(dataMetaData.getData().getTransactionId());
                 } catch (NumberFormatException e) {
                 }
             }

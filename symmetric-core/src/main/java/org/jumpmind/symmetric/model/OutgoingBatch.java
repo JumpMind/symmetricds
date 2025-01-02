@@ -35,6 +35,7 @@ public class OutgoingBatch extends AbstractBatch {
     private Date extractStartTime;
     private Date transferStartTime;
     private Date loadStartTime;
+    private Integer threadId;
 
     public OutgoingBatch() {
         setStatus(Status.RT);
@@ -97,5 +98,13 @@ public class OutgoingBatch extends AbstractBatch {
 
     public void setLoadStartTime(Date loadStartTime) {
         this.loadStartTime = loadStartTime;
+    }
+
+    public Integer getThreadId() {
+        return threadId;
+    }
+
+    public void setThreadId(Integer threadId) {
+        this.threadId = threadId;
     }
 }

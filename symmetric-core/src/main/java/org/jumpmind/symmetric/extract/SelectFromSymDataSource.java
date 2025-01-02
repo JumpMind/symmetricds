@@ -295,9 +295,7 @@ public class SelectFromSymDataSource extends SelectFromSource {
         boolean excludeIndexes = parameterService.is(ParameterConstants.CREATE_TABLE_WITHOUT_INDEXES, false) | sendSchemaExcludeIndices;
         boolean deferConstraints = outgoingBatch.isLoadFlag() && parameterService.is(ParameterConstants.INITIAL_LOAD_DEFER_CREATE_CONSTRAINTS, false);
         boolean deferTableLogging = evaluateDeferTableLogging(outgoingBatch, sendSchemaExcludeIndices);
-        String[] pkData = data.getParsedData(CsvData.PK_DATA);
-        if (pkData != null && pkData.length > 0) {
-            outgoingBatch.setLoadId(Long.parseLong(pkData[0]));
+        if (outgoingBatch.getLoadId() > 0) {
             TableReloadStatus tableReloadStatus = dataService.getTableReloadStatusByLoadIdAndSourceNodeId(outgoingBatch.getLoadId(), engine.getNodeId());
             if (tableReloadStatus != null && tableReloadStatus.isCompleted()) {
                 // Ignore create table (indexes and foreign keys) at end of load if it was cancelled

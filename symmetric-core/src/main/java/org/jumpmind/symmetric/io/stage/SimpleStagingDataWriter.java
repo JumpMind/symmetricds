@@ -61,7 +61,7 @@ public class SimpleStagingDataWriter {
     protected ProcessInfo processInfo;
     protected BufferedWriter writer;
     protected Batch batch;
-    protected long invalidLineCount;
+    protected boolean missingBatchId;
     protected Exception exception;
 
     public SimpleStagingDataWriter(ProcessInfo processInfo, BufferedReader reader, ISymmetricEngine engine, String category, long memoryThresholdInBytes,
@@ -214,7 +214,7 @@ public class SimpleStagingDataWriter {
                     putStats(batchStats, batchStatsColumnsLine, batchStatsLine);
                     processInfo.setTotalDataCount(batchStats.get("DATA_ROW_COUNT"));
                 } else if (writer == null) {
-                    invalidLineCount++;
+                    missingBatchId = true;
                 } else {
                     TableLine batchLine = batchTableLines.get(tableLine);
                     if (batchLine == null || (batchLine != null && batchLine.columnsLine == null)) {
@@ -278,8 +278,8 @@ public class SimpleStagingDataWriter {
             log.error("Failed to write batch into staging from {}.  {}: {}", context.getContext().get(Constants.DATA_CONTEXT_SOURCE_NODE).toString(),
                     ex.getClass().getName(), ex.getMessage());
         } finally {
-            if (invalidLineCount > 0) {
-                log.warn("Found {} invalid lines that could not be written to a batch", invalidLineCount);
+            if (missingBatchId) {
+                throw new ProtocolException("Batch content is missing batch ID");
             }
         }
     }

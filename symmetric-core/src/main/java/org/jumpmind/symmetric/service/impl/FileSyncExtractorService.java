@@ -71,6 +71,10 @@ public class FileSyncExtractorService extends DataExtractorService {
     }
 
     @Override
+    protected void updateExtractRequestsForThreading() {
+    }
+
+    @Override
     protected boolean canProcessExtractRequest(ExtractRequest request, CommunicationType communicationType) {
         return request.getTableName().equalsIgnoreCase(TableConstants.getTableName(tablePrefix, TableConstants.SYM_FILE_SNAPSHOT));
     }

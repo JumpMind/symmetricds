@@ -39,11 +39,11 @@ import java.util.concurrent.ThreadPoolExecutor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.lang3.time.DateUtils;
 import org.jumpmind.db.sql.ISqlRowMapper;
 import org.jumpmind.db.sql.Row;
 import org.jumpmind.db.sql.mapper.StringMapper;
+import org.jumpmind.symmetric.common.Constants;
 import org.jumpmind.symmetric.common.ParameterConstants;
 import org.jumpmind.symmetric.db.ISymmetricDialect;
 import org.jumpmind.symmetric.model.Channel;
@@ -199,7 +199,7 @@ public class NodeCommunicationService extends AbstractService implements INodeCo
         for (NodeCommunication nodeCommunication : communicationRows) {
             communicationRowsMap.put(nodeCommunication.getIdentifier(), nodeCommunication);
         }
-        List<NodeCommunication> nodesToCommunicateWithList = filterForChannelThreading(nodesToCommunicateWith);
+        List<NodeCommunication> nodesToCommunicateWithList = filterForChannelThreading(nodesToCommunicateWith, communicationType);
         Map<String, NodeCommunication> nodesToCommunicateWithListMap = new HashMap<String, NodeCommunication>(nodesToCommunicateWithList.size());
         for (NodeCommunication nodeToCommunicateWith : nodesToCommunicateWithList) {
             NodeCommunication comm = communicationRowsMap.get(nodeToCommunicateWith.getIdentifier());
@@ -214,16 +214,7 @@ public class NodeCommunicationService extends AbstractService implements INodeCo
             comm.setNode(nodeToCommunicateWith.getNode());
             nodesToCommunicateWithListMap.put(nodeToCommunicateWith.getNodeId(), nodeToCommunicateWith);
         }
-        Iterator<NodeCommunication> it = communicationRows.iterator();
-        while (it.hasNext()) {
-            NodeCommunication nodeCommunication = it.next();
-            NodeCommunication nodeToCommunicateWith = nodesToCommunicateWithListMap.get(nodeCommunication.getNodeId());
-            Node node = nodeToCommunicateWith != null ? nodeToCommunicateWith.getNode() : null;
-            if (node == null || (!isQueueValid(nodeCommunication))) {
-                delete(nodeCommunication);
-                it.remove();
-            }
-        }
+        removeInvalidQueues(communicationType, communicationRows, nodesToCommunicateWithListMap);
         if (communicationType == CommunicationType.PUSH && onlyNodesWithChanges &&
                 parameterService.getInt(ParameterConstants.PUSH_THREAD_COUNT_PER_SERVER) < communicationRows.size()) {
             ts = System.currentTimeMillis();
@@ -243,20 +234,29 @@ public class NodeCommunicationService extends AbstractService implements INodeCo
         return communicationRows;
     }
 
-    private boolean isQueueValid(NodeCommunication nodeCommunication) {
-        boolean ret = false;
-        String queue = nodeCommunication.getQueue();
+    protected void removeInvalidQueues(CommunicationType communicationType, List<NodeCommunication> communicationRows,
+            Map<String, NodeCommunication> nodesToCommunicateWithListMap) {
         Map<String, Channel> channels = configurationService.getChannels(false);
-        for (String key : channels.keySet()) {
-            Channel channel = channels.get(key);
-            if (channel != null) {
-                if (StringUtils.equalsIgnoreCase(queue, channel.getQueue())) {
-                    ret = true;
-                    break;
-                }
+        HashSet<String> queues = new HashSet<String>();
+        for (Channel channel : channels.values()) {
+            queues.add(channel.getQueue());
+        }
+        int reloadThreadCount = getReloadThreadCount(communicationType);
+        if (queues.contains(Constants.QUEUE_RELOAD)) {
+            for (int i = 0; i < reloadThreadCount; i++) {
+                queues.add(Constants.QUEUE_RELOAD + Constants.DELIMITER_QUEUE_THREAD + i);
             }
         }
-        return ret;
+        Iterator<NodeCommunication> it = communicationRows.iterator();
+        while (it.hasNext()) {
+            NodeCommunication nodeCommunication = it.next();
+            NodeCommunication nodeToCommunicateWith = nodesToCommunicateWithListMap.get(nodeCommunication.getNodeId());
+            Node node = nodeToCommunicateWith != null ? nodeToCommunicateWith.getNode() : null;
+            if (node == null || (!queues.contains(nodeCommunication.getQueue()))) {
+                delete(nodeCommunication);
+                it.remove();
+            }
+        }
     }
 
     protected List<String> getNodeIdsWithUnsentCount() {
@@ -265,22 +265,13 @@ public class NodeCommunicationService extends AbstractService implements INodeCo
                 OutgoingBatch.Status.SE.name(), OutgoingBatch.Status.LD.name(), OutgoingBatch.Status.IG.name(), OutgoingBatch.Status.RS.name());
     }
 
-    protected List<NodeCommunication> filterForChannelThreading(List<Node> nodesToCommunicateWith) {
+    protected List<NodeCommunication> filterForChannelThreading(List<Node> nodesToCommunicateWith, CommunicationType communicationType) {
         List<NodeCommunication> nodeCommunications = new ArrayList<NodeCommunication>();
         Collection<Channel> channels = configurationService.getChannels(false).values();
+        int reloadThreadCount = getReloadThreadCount(communicationType);
         for (Node node : nodesToCommunicateWith) {
             if (node.isVersionGreaterThanOrEqualTo(3, 8, 0)) {
-                Set<String> channelThreads = new HashSet<String>();
-                for (Channel channel : channels) {
-                    if (!channelThreads.contains(channel.getQueue())) {
-                        NodeCommunication nodeCommunication = new NodeCommunication();
-                        nodeCommunication.setNodeId(node.getNodeId());
-                        nodeCommunication.setQueue(channel.getQueue());
-                        nodeCommunication.setNode(node);
-                        nodeCommunications.add(nodeCommunication);
-                        channelThreads.add(channel.getQueue());
-                    }
-                }
+                multiplyNodeCommunicationByQueues(node, nodeCommunications, channels, reloadThreadCount);
             } else {
                 NodeCommunication nodeCommunication = new NodeCommunication();
                 nodeCommunication.setNodeId(node.getNodeId());
@@ -289,6 +280,40 @@ public class NodeCommunicationService extends AbstractService implements INodeCo
             }
         }
         return nodeCommunications;
+    }
+
+    protected int getReloadThreadCount(CommunicationType communicationType) {
+        int reloadThreadCount = 1;
+        if (communicationType == CommunicationType.EXTRACT) {
+            reloadThreadCount = parameterService.getInt(ParameterConstants.INITIAL_LOAD_EXTRACT_THREAD_COUNT_PER_SERVER);
+        } else if (communicationType == CommunicationType.PULL || communicationType == CommunicationType.PUSH) {
+            reloadThreadCount = parameterService.getInt(ParameterConstants.INITIAL_LOAD_QUEUE_SYNC_THREAD_COUNT);
+        }
+        return reloadThreadCount > 0 ? reloadThreadCount : 1;
+    }
+
+    protected void multiplyNodeCommunicationByQueues(Node node, List<NodeCommunication> nodeCommunications, Collection<Channel> channels,
+            int reloadThreadCount) {
+        Set<String> queues = new HashSet<String>();
+        for (Channel channel : channels) {
+            if (!queues.contains(channel.getQueue())) {
+                addNodeQueue(nodeCommunications, queues, node, channel.getQueue());
+                if (channel.getQueue().equals(Constants.QUEUE_RELOAD)) {
+                    for (int i = 0; i < reloadThreadCount; i++) {
+                        addNodeQueue(nodeCommunications, queues, node, channel.getQueue() + Constants.DELIMITER_QUEUE_THREAD + i);
+                    }
+                }
+            }
+        }
+    }
+
+    protected void addNodeQueue(List<NodeCommunication> nodeCommunications, Set<String> channelThreads, Node node, String queue) {
+        NodeCommunication nodeCommunication = new NodeCommunication();
+        nodeCommunication.setNodeId(node.getNodeId());
+        nodeCommunication.setQueue(queue);
+        nodeCommunication.setNode(node);
+        nodeCommunications.add(nodeCommunication);
+        channelThreads.add(queue);
     }
 
     protected List<Node> removeOfflineNodes(List<Node> nodes) {
