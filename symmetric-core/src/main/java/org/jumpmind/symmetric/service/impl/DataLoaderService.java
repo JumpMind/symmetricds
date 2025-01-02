@@ -653,7 +653,7 @@ public class DataLoaderService extends AbstractService implements IDataLoaderSer
     }
 
     private void notifyQueuesReady(RemoteNodeStatus status, IIncomingTransport transport) {
-        if (status != null && status.getQueue().equals(Constants.QUEUE_DEFAULT)) {
+        if (status != null && Constants.QUEUE_DEFAULT.equals(status.getQueue())) {
             String queues = null;
             Map<String, String> headers = transport.getHeaders();
             if (headers != null) {
