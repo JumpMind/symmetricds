@@ -26,7 +26,10 @@ import java.util.List;
 import org.jumpmind.extension.IExtensionPoint;
 import org.jumpmind.symmetric.model.Channel;
 import org.jumpmind.symmetric.model.ExtractRequest;
+import org.jumpmind.symmetric.model.NodeCommunication.CommunicationType;
 
 public interface IReloadQueueThreadAssigner extends IExtensionPoint {
     public Collection<ExtractRequest> assignThreadsToExtractRequests(List<ExtractRequest> extractRequests, Channel reloadChannel);
+
+    public void addDynamicQueues(Collection<String> queues, CommunicationType communicationType);
 }
