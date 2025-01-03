@@ -61,9 +61,14 @@ public class OutgoingBatchCache {
         long readyQueuesCacheTimeoutInMs = parameterService.getLong(ParameterConstants.CACHE_TIMEOUT_READY_QUEUE_IN_MS, 5000);
         if (System.currentTimeMillis() - readyQueuesCacheTime >= readyQueuesCacheTimeoutInMs || readyQueuesCache == null || refreshCache) {
             if (cacheLock.tryAcquire()) {
-                populateReadyQueuesCache(readyQueuesCacheTimeoutInMs);
-                readyQueuesCacheTime = System.currentTimeMillis();
-                cacheLock.release();
+                try {
+                    populateReadyQueuesCache(readyQueuesCacheTimeoutInMs);
+                    readyQueuesCacheTime = System.currentTimeMillis();
+                } catch (Exception e) {
+                    log.error("Failed to retrieve ready queues", e);
+                } finally {
+                    cacheLock.release();
+                }
             }
         }
     }
