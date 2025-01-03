@@ -21,8 +21,11 @@
 package org.jumpmind.symmetric.util;
 
 import org.jumpmind.symmetric.common.Constants;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 public class QueueThread {
+    protected final Logger log = LoggerFactory.getLogger(QueueThread.class);
     protected String name;
     protected int threadId;
     protected boolean usingThreading;
@@ -36,6 +39,7 @@ public class QueueThread {
                     threadId = Integer.parseInt(queue.substring(index + 1));
                     usingThreading = true;
                 } catch (NumberFormatException e) {
+                    log.warn("Invalid thread ID from queue {}", queue);
                 }
             } else {
                 name = queue;
