@@ -492,6 +492,11 @@ public class ModelComparator {
                             sourceDefaultValueString = sourceDefaultValueString.replace("::text", "");
                         }
                         return sourceDefaultValueString.equalsIgnoreCase(targetDefaultValueString);
+                    } else if (sourceColumn.isOfNumericType() && targetColumn.isOfNumericType()) {
+                        if (sourceColumn.anyPlatformColumnNameContains("postgres")) {
+                            sourceDefaultValueString = sourceDefaultValueString.replace("'","").replace("::integer", "");
+                        }
+                        return sourceDefaultValueString.equalsIgnoreCase(targetDefaultValueString);
                     }
                     return false;
                 }
