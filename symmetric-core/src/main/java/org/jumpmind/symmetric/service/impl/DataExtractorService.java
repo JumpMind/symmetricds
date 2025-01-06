@@ -347,16 +347,24 @@ public class DataExtractorService extends AbstractService implements IDataExtrac
             if (batches.containsLoadBatches()) {
                 if (!(parameterService.is(ParameterConstants.INITIAL_LOAD_UNBLOCK_CHANNELS_ON_ERROR, true) && batches.containsBatchesInError())) {
                     batches.removeNonLoadBatches();
-                    log.debug("Removing non-load batches from queue {}", queue);
+                    log.info("Removing non-load batches from queue {} for target node", queue, targetNode);
                 }
             } else {
                 NodeSecurity nodeSecurity = nodeService.findNodeSecurity(targetNode.getNodeId(), true);
-                if (nodeSecurity != null && (nodeSecurity.isInitialLoadEnabled() || (nodeSecurity.getInitialLoadTime() != null &&
-                        nodeSecurity.getInitialLoadEndTime() == null))) {
-                    TableReloadStatus status = dataService.getTableReloadStatusByLoadIdAndSourceNodeId(nodeSecurity.getInitialLoadId(), engine.getNodeId());
-                    if (status != null && status.getDataBatchLoaded() < status.getDataBatchCount()) {
-                        batches.removeNonLoadBatches();
-                        log.debug("Removing non-load batches from queue {}", queue);
+                if (nodeSecurity != null) {
+                    long loadId = 0;
+                    if (nodeSecurity.getInitialLoadTime() != null && nodeSecurity.getInitialLoadEndTime() == null) {
+                        loadId = nodeSecurity.getInitialLoadId();
+                    } else if (nodeSecurity.getPartialLoadTime() != null && nodeSecurity.getPartialLoadEndTime() == null) {
+                        loadId = nodeSecurity.getPartialLoadId();
+                    }
+                    if (loadId != 0) {
+                        TableReloadStatus status = dataService.getTableReloadStatusByLoadIdAndSourceNodeId(loadId, engine.getNodeId());
+                        if (status != null && status.getDataBatchLoaded() < status.getDataBatchCount()) {
+                            batches.removeNonLoadBatches();
+                            log.info("Removing non-load batches from queue {} for target node {} because load ID {} was found", queue, targetNode,
+                                    status.getLoadId());
+                        }                        
                     }
                 }
             }
@@ -1459,9 +1467,14 @@ public class DataExtractorService extends AbstractService implements IDataExtrac
         }
         TableReloadStatus status = dataService.updateTableReloadStatusDataLoaded(transaction,
                 outgoingBatch.getLoadId(), engine.getNodeId(), outgoingBatch.getBatchId(), 1, outgoingBatch.isBulkLoaderFlag());
-        if (status != null && status.isFullLoad() && (status.isCancelled() || status.isCompleted())) {
-            log.info("Initial load ended for node {}", outgoingBatch.getNodeId());
-            nodeService.setInitialLoadEnded(transaction, outgoingBatch.getNodeId());
+        if (status != null && (status.isCancelled() || status.isCompleted())) {
+            if (status.isFullLoad()) {
+                log.info("Initial load ended for node {}, load ID {}", outgoingBatch.getNodeId(), status.getLoadId());
+                nodeService.setInitialLoadEnded(transaction, outgoingBatch.getNodeId());
+            } else {
+                log.info("Partial load ended for node {}, load ID {}", outgoingBatch.getNodeId(), status.getLoadId());
+                nodeService.setPartialLoadEnded(transaction, outgoingBatch.getNodeId());
+            }
         }
     }
 

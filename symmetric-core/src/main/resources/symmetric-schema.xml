@@ -607,6 +607,10 @@
         <column name="initial_load_end_time" type="TIMESTAMP" required="false"  description="The timestamp when an initial load was completed for this node." />
         <column name="initial_load_id" type="BIGINT" description="A reference to the load_id in outgoing_batch for the last load that occurred." />
         <column name="initial_load_create_by" type="VARCHAR" size="255" description="The user that created the initial load.  A null value means that the system created the batch." />
+        <column name="partial_load_time" type="TIMESTAMP" required="false"  description="The timestamp when a partial load was started for this node." />
+        <column name="partial_load_end_time" type="TIMESTAMP" required="false"  description="The timestamp when a partial load was completed for this node." />
+        <column name="partial_load_id" type="BIGINT" description="A reference to the load_id in outgoing_batch for the last partial load that occurred." />
+        <column name="partial_load_create_by" type="VARCHAR" size="255" description="The user that created the partial load.  A null value means that the system created the batch." />
         <column name="rev_initial_load_enabled" type="BOOLEANINT" size="1" default="0"  description="Indicates that this node should send a reverse initial load." />
         <column name="rev_initial_load_time" type="TIMESTAMP" required="false"  description="The timestamp when this node last sent an initial load." />
         <column name="rev_initial_load_id" type="BIGINT" description="A reference to the load_id in outgoing_batch for the last reverse load that occurred." />

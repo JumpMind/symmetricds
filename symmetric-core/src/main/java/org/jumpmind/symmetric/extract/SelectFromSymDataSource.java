@@ -362,7 +362,7 @@ public class SelectFromSymDataSource extends SelectFromSource {
         String xml = DatabaseXmlUtil.toXml(db);
         data.setRowData(CsvUtils.escapeCsvData(xml));
         if (excludeDefaults || excludeForeignKeys || excludeIndexes || deferConstraints || deferTableLogging) {
-            log.info("Adjusted table definition: {}", xml);
+            log.debug("Adjusted batch {} channel {} table definition: {}", outgoingBatch.getNodeBatchId(), outgoingBatch.getChannelId(), xml);
         }
         return true;
     }

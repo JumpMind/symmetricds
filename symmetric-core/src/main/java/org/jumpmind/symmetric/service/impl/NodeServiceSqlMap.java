@@ -69,7 +69,8 @@ public class NodeServiceSqlMap extends AbstractSqlMap {
                         + "registration_not_before, registration_not_after, "
                         + "initial_load_enabled, initial_load_time, initial_load_end_time, created_at_node_id, "
                         + "rev_initial_load_enabled, rev_initial_load_time, initial_load_id, "
-                        + "initial_load_create_by, rev_initial_load_id, rev_initial_load_create_by, failed_logins "
+                        + "initial_load_create_by, rev_initial_load_id, rev_initial_load_create_by, failed_logins, "
+                        + "partial_load_time, partial_load_end_time, partial_load_id, partial_load_create_by "
                         + "from $(node_security) ");
         putSql("findNodeSecurityByNodeIdSql", "where node_id = ?");
         putSql("selectExternalIdsSql",
@@ -126,7 +127,8 @@ public class NodeServiceSqlMap extends AbstractSqlMap {
                 + "registration_time = ?, registration_not_before = ?, registration_not_after = ?, "
                 + "initial_load_enabled = ?, initial_load_time = ?, initial_load_end_time = ?, created_at_node_id = ?, "
                 + "rev_initial_load_enabled=?, rev_initial_load_time=?, initial_load_id=?, "
-                + " initial_load_create_by=?, rev_initial_load_id=?, rev_initial_load_create_by=?, failed_logins=? "
+                + " initial_load_create_by=?, rev_initial_load_id=?, rev_initial_load_create_by=?, failed_logins=?, "
+                + "partial_load_time=?, partial_load_end_time=?, partial_load_id=?, partial_load_create_by=? "
                 + " where node_id = ?");
         putSql("insertNodeSecuritySql",
                 ""

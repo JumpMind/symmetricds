@@ -1008,6 +1008,9 @@ public class DataService extends AbstractService implements IDataService {
                                         platform.supportsMultiThreadedTransactions() ? null : transaction,
                                         loadId, request);
                             }
+                            if (!isFullLoad && !reverse) {
+                                nodeService.setPartialLoadStarted(transaction, nodeIdRecord, loadId, createBy);
+                            }
                             // force early commit to get load ID on the reload requests and reload status
                             close(transaction);
                             transaction = platform.getSqlTemplate().startSqlTransaction();

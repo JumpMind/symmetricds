@@ -397,4 +397,14 @@ public class MockNodeService implements INodeService {
     public boolean setInitialLoadEnded(ISqlTransaction transaction, String nodeId) {
         return false;
     }
+
+    @Override
+    public boolean setPartialLoadStarted(ISqlTransaction transaction, String nodeId, long loadId, String createBy) {
+        return false;
+    }
+
+    @Override
+    public boolean setPartialLoadEnded(ISqlTransaction transaction, String nodeId) {
+        return false;
+    }
 }
