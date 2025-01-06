@@ -247,9 +247,8 @@ public class DefaultDatabaseWriter extends AbstractDatabaseWriter {
     protected String replaceCteExpression(String sql) {
         String retSql = sql;
         if (isCteExpression()) {
-            retSql = getPlatform().getDdlBuilder().getDatabaseInfo().getCteExpression()
-                    + " " + sql;
-            retSql = currentDmlStatement.updateCteExpression(retSql, batch.getSourceNodeId());
+            retSql = getPlatform().getDdlBuilder().getDatabaseInfo().getCteExpression() + " " + sql;
+            retSql = DmlStatement.updateCteExpression(retSql, batch.getSourceNodeId());
         }
         return retSql;
     }
@@ -644,7 +643,7 @@ public class DefaultDatabaseWriter extends AbstractDatabaseWriter {
             getTargetTransaction().commit();
             statistics.get(batch).startTimer(DataWriterStatisticConstants.LOADMILLIS);
             xml = data.getParsedData(CsvData.ROW_DATA)[0];
-            log.info("Incoming batch contains the following table definition: {}", xml);
+            log.info("Incoming batch {} on channel {} contains the following table definition: {}", batch.getNodeBatchId(), batch.getChannelId(), xml);
             StringReader reader = new StringReader(xml);
             db = DatabaseXmlUtil.read(reader, false);
             hasMatchingPlatform = getTargetPlatform().hasMatchingPlatform(db);
