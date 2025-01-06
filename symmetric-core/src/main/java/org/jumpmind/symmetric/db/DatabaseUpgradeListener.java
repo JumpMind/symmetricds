@@ -269,6 +269,19 @@ public class DatabaseUpgradeListener implements IDatabaseUpgradeListener, ISymme
             }
         }
         isUpgradeFromPre316 = isUpgradeFromPre316(tablePrefix, currentModel);
+        if (isUpgradeFromPre316) {
+            String[] tableNames = { tablePrefix + "_design_diagram", tablePrefix + "_diagram_group" };
+            for (String tableName : tableNames) {
+                if (currentModel.findTable(tableName) != null) {
+                    dropTriggers(currentModel, tableName);
+                    try {
+                        engine.getSqlTemplate().update("drop table " + tableName);
+                    } catch (Exception e) {
+                        log.info("Unable to drop table {} because: {}", tableName, e.getMessage());
+                    }
+                }
+            }
+        }
         // Leave this last in the sequence of steps to make sure to capture any DML changes done before this
         if (engine.getParameterService().is(ParameterConstants.AUTO_SYNC_TRIGGERS) &&
                 currentModel.getTableCount() > 0 && currentModel.findTable(tablePrefix + "_" + TableConstants.SYM_TRIGGER_HIST) != null) {
@@ -352,6 +365,17 @@ public class DatabaseUpgradeListener implements IDatabaseUpgradeListener, ISymme
             TriggerHistory hist = engine.getTriggerRouterService().findTriggerHistory(null, null, tableName);
             if (hist != null) {
                 log.info("Dropping triggers on " + tableName + " because " + columnName + " needs dropped");
+                engine.getTriggerRouterService().dropTriggers(hist);
+            }
+        }
+    }
+
+    protected void dropTriggers(Database currentModel, String tableName) {
+        Table table = currentModel.findTable(tableName);
+        if (table != null) {
+            TriggerHistory hist = engine.getTriggerRouterService().findTriggerHistory(null, null, tableName);
+            if (hist != null) {
+                log.info("Dropping triggers on " + tableName);
                 engine.getTriggerRouterService().dropTriggers(hist);
             }
         }
