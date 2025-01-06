@@ -20,15 +20,17 @@
  */
 package org.jumpmind.symmetric.service.impl;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
 import org.apache.commons.lang3.StringUtils;
+import org.jumpmind.symmetric.ISymmetricEngine;
 import org.jumpmind.symmetric.SymmetricException;
 import org.jumpmind.symmetric.common.ParameterConstants;
-import org.jumpmind.symmetric.db.ISymmetricDialect;
 import org.jumpmind.symmetric.model.BatchAck;
 import org.jumpmind.symmetric.model.Node;
 import org.jumpmind.symmetric.model.NodeCommunication;
@@ -46,11 +48,10 @@ import org.jumpmind.symmetric.service.IAcknowledgeService;
 import org.jumpmind.symmetric.service.IClusterService;
 import org.jumpmind.symmetric.service.IConfigurationService;
 import org.jumpmind.symmetric.service.IDataExtractorService;
-import org.jumpmind.symmetric.service.IExtensionService;
 import org.jumpmind.symmetric.service.INodeCommunicationService;
 import org.jumpmind.symmetric.service.INodeCommunicationService.INodeCommunicationExecutor;
 import org.jumpmind.symmetric.service.INodeService;
-import org.jumpmind.symmetric.service.IParameterService;
+import org.jumpmind.symmetric.service.IOutgoingBatchService;
 import org.jumpmind.symmetric.service.IPushService;
 import org.jumpmind.symmetric.service.IRegistrationService;
 import org.jumpmind.symmetric.statistic.IStatisticManager;
@@ -71,23 +72,21 @@ public class PushService extends AbstractOfflineDetectorService implements IPush
     private INodeCommunicationService nodeCommunicationService;
     private IStatisticManager statisticManager;
     private IConfigurationService configurationService;
+    private IOutgoingBatchService outgoingBatchService;
     private Map<String, Date> startTimesOfNodesBeingPushedTo = new HashMap<String, Date>();
 
-    public PushService(IParameterService parameterService, ISymmetricDialect symmetricDialect,
-            IDataExtractorService dataExtractorService, IAcknowledgeService acknowledgeService, IRegistrationService registrationService,
-            ITransportManager transportManager, INodeService nodeService,
-            IClusterService clusterService, INodeCommunicationService nodeCommunicationService, IStatisticManager statisticManager,
-            IConfigurationService configrationService, IExtensionService extensionService) {
-        super(parameterService, symmetricDialect, extensionService);
-        this.dataExtractorService = dataExtractorService;
-        this.acknowledgeService = acknowledgeService;
-        this.registrationService = registrationService;
-        this.transportManager = transportManager;
-        this.nodeService = nodeService;
-        this.clusterService = clusterService;
-        this.nodeCommunicationService = nodeCommunicationService;
-        this.statisticManager = statisticManager;
-        this.configurationService = configrationService;
+    public PushService(ISymmetricEngine engine) {
+        super(engine.getParameterService(), engine.getSymmetricDialect(), engine.getExtensionService());
+        dataExtractorService = engine.getDataExtractorService();
+        acknowledgeService = engine.getAcknowledgeService();
+        registrationService = engine.getRegistrationService();
+        transportManager = engine.getTransportManager();
+        nodeService = engine.getNodeService();
+        clusterService = engine.getClusterService();
+        nodeCommunicationService = engine.getNodeCommunicationService();
+        statisticManager = engine.getStatisticManager();
+        configurationService = engine.getConfigurationService();
+        outgoingBatchService = engine.getOutgoingBatchService();
     }
 
     public Map<String, Date> getStartTimesOfNodesBeingPushedTo() {
@@ -106,6 +105,7 @@ public class PushService extends AbstractOfflineDetectorService implements IPush
                     if (identitySecurity != null) {
                         int availableThreads = nodeCommunicationService.getAvailableThreads(CommunicationType.PUSH);
                         boolean isMasterToMaster = configurationService.isMasterToMaster();
+                        nodes = filterForReadyQueues(nodes);
                         for (NodeCommunication nodeCommunication : nodes) {
                             boolean meetsMinimumTime = true;
                             if (minimumPeriodMs > 0 && nodeCommunication.getLastLockTime() != null &&
@@ -144,6 +144,20 @@ public class PushService extends AbstractOfflineDetectorService implements IPush
         return statuses;
     }
 
+    protected List<NodeCommunication> filterForReadyQueues(List<NodeCommunication> nodes) {
+        List<NodeCommunication> filteredNodes = nodes;
+        if (parameterService.is(ParameterConstants.SYNC_USE_READY_QUEUES)) {
+            filteredNodes = new ArrayList<NodeCommunication>();
+            for (NodeCommunication nodeCommunication : nodes) {
+                Collection<String> readyQueues = outgoingBatchService.getReadyQueues(nodeCommunication.getNodeId(), false);
+                if (readyQueues.contains(nodeCommunication.getQueue())) {
+                    filteredNodes.add(nodeCommunication);
+                }
+            }
+        }
+        return filteredNodes;
+    }
+
     public void execute(NodeCommunication nodeCommunication, RemoteNodeStatus status) {
         Node node = nodeCommunication.getNode();
         boolean immediatePushIfDataFound = parameterService.is(ParameterConstants.PUSH_IMMEDIATE_IF_DATA_FOUND, false);
@@ -170,13 +184,13 @@ public class PushService extends AbstractOfflineDetectorService implements IPush
                     lastDataProcessed = status.getDataProcessed() - cumulativeDataProcessed;
                     lastReloadBatchesProcessed = status.getReloadBatchesProcessed() - cumulativeReloadBatchesProcessed;
                     if (!status.failed() && lastBatchesProcessed > 0) {
-                        log.info("Pushed data to node {}. {} data and {} batches were processed. ({})",
-                                new Object[] { node, lastDataProcessed, lastBatchesProcessed, status.getTableSummary() });
+                        log.info("Pushed data to node {} on queue {}. {} data and {} batches were processed. ({})",
+                                node, nodeCommunication.getQueue(), lastDataProcessed, lastBatchesProcessed, status.getTableSummary());
                     } else if (status.failed()) {
-                        log.debug("There was a failure while pushing data to {}. {} data and {} batches were processed. ({})",
-                                new Object[] { node, lastDataProcessed, lastBatchesProcessed, status.getTableSummary() });
+                        log.debug("There was a failure while pushing data to {} on queue {}. {} data and {} batches were processed. ({})",
+                                node, nodeCommunication.getQueue(), lastDataProcessed, lastBatchesProcessed, status.getTableSummary());
                     }
-                    log.debug("Push completed for {} channel {}", node, nodeCommunication.getQueue());
+                    log.debug("Push completed for {} on queue {}", node, nodeCommunication.getQueue());
                     cumulativeReloadBatchesProcessed = status.getReloadBatchesProcessed();
                     cumulativeDataProcessed = status.getDataProcessed();
                     cumulativeBatchesProcessed = status.getBatchesProcessed();

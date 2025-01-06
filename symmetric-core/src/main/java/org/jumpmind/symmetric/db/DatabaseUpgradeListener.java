@@ -66,6 +66,7 @@ public class DatabaseUpgradeListener implements IDatabaseUpgradeListener, ISymme
     protected boolean isUpgradeFromPre3125;
     protected boolean isUpgradeFromPre314;
     protected boolean isUpgradeFromPre315;
+    protected boolean isUpgradeFromPre316;
 
     @Override
     public String beforeUpgrade(ISymmetricDialect symmetricDialect, String tablePrefix, Database currentModel, Database desiredModel)
@@ -267,6 +268,7 @@ public class DatabaseUpgradeListener implements IDatabaseUpgradeListener, ISymme
                 }
             }
         }
+        isUpgradeFromPre316 = isUpgradeFromPre316(tablePrefix, currentModel);
         // Leave this last in the sequence of steps to make sure to capture any DML changes done before this
         if (engine.getParameterService().is(ParameterConstants.AUTO_SYNC_TRIGGERS) &&
                 currentModel.getTableCount() > 0 && currentModel.findTable(tablePrefix + "_" + TableConstants.SYM_TRIGGER_HIST) != null) {
@@ -316,6 +318,14 @@ public class DatabaseUpgradeListener implements IDatabaseUpgradeListener, ISymme
             log.info("After upgrade, fixing initial_load_end_time");
             engine.getSqlTemplate().update("update " + tablePrefix + "_" + TableConstants.SYM_NODE_SECURITY
                     + " set initial_load_end_time = initial_load_time where initial_load_time is not null");
+        }
+        if (isUpgradeFromPre316) {
+            log.info("After upgrading, fixing loaded_time on sym_extract_request");
+            engine.getSqlTemplate().update("update " + tablePrefix + "_" + TableConstants.SYM_EXTRACT_REQUEST
+                    + " set loaded_time = last_update_time where source_node_id = ? and loaded_time is null"
+                    + " and load_id in (select load_id from " + tablePrefix + "_" + TableConstants.SYM_TABLE_RELOAD_STATUS
+                    + " where source_node_id = ? and completed = 1)",
+                    engine.getNodeId(), engine.getNodeId());
         }
         engine.getPullService().pullConfigData(false);
         return sb.toString();
@@ -491,6 +501,11 @@ public class DatabaseUpgradeListener implements IDatabaseUpgradeListener, ISymme
             }
         }
         return false;
+    }
+
+    protected boolean isUpgradeFromPre316(String tablePrefix, Database currentModel) {
+        Table table = currentModel.findTable(tablePrefix + "_" + TableConstants.SYM_EXTRACT_REQUEST);
+        return table != null && table.findColumn("extract_thread_id") == null;
     }
 
     @Override

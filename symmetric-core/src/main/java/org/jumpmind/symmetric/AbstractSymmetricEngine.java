@@ -320,10 +320,9 @@ abstract public class AbstractSymmetricEngine implements ISymmetricEngine {
         this.loadFilterService = new LoadFilterService(this, symmetricDialect);
         this.groupletService = new GroupletService(this);
         this.triggerRouterService = new TriggerRouterService(this);
-        this.outgoingBatchService = new OutgoingBatchService(parameterService, symmetricDialect,
-                nodeService, configurationService, sequenceService, clusterService, extensionService);
+        this.outgoingBatchService = new OutgoingBatchService(this);
         this.routerService = buildRouterService();
-        this.nodeCommunicationService = buildNodeCommunicationService(clusterService, nodeService, parameterService, configurationService, symmetricDialect);
+        this.nodeCommunicationService = buildNodeCommunicationService();
         this.incomingBatchService = new IncomingBatchService(parameterService, symmetricDialect, clusterService);
         this.initialLoadService = new InitialLoadService(this);
         this.dataExtractorService = new DataExtractorService(this);
@@ -332,12 +331,8 @@ abstract public class AbstractSymmetricEngine implements ISymmetricEngine {
         this.dataLoaderService = new DataLoaderService(this);
         this.registrationService = new RegistrationService(this);
         this.acknowledgeService = new AcknowledgeService(this);
-        this.pushService = new PushService(parameterService, symmetricDialect,
-                dataExtractorService, acknowledgeService, registrationService, transportManager, nodeService,
-                clusterService, nodeCommunicationService, statisticManager, configurationService, extensionService);
-        this.pullService = new PullService(parameterService, symmetricDialect,
-                nodeService, dataLoaderService, registrationService, clusterService, nodeCommunicationService,
-                configurationService, extensionService, statisticManager);
+        this.pushService = new PushService(this);
+        this.pullService = new PullService(this);
         this.offlinePushService = new OfflinePushService(parameterService, symmetricDialect,
                 dataExtractorService, acknowledgeService, offlineTransportManager, nodeService,
                 clusterService, nodeCommunicationService, statisticManager, configurationService, extensionService);
@@ -392,10 +387,8 @@ abstract public class AbstractSymmetricEngine implements ISymmetricEngine {
         return new FileSyncService(this);
     }
 
-    protected INodeCommunicationService buildNodeCommunicationService(IClusterService clusterService, INodeService nodeService,
-            IParameterService parameterService,
-            IConfigurationService configurationService, ISymmetricDialect symmetricDialect) {
-        return new NodeCommunicationService(clusterService, nodeService, parameterService, configurationService, symmetricDialect);
+    protected INodeCommunicationService buildNodeCommunicationService() {
+        return new NodeCommunicationService(this);
     }
 
     abstract protected IStagingManager createStagingManager();

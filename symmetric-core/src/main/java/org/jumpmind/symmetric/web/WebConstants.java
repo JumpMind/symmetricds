@@ -25,6 +25,7 @@ package org.jumpmind.symmetric.web;
  */
 public class WebConstants {
     public static final String HEADER_ACCEPT_CHARSET = "Accept-Charset";
+    public static final String HEADER_READY_QUEUES = "Ready-Queues";
     public static final String METHOD_GET = "GET";
     public static final String METHOD_POST = "POST";
     public static final String METHOD_PUT = "PUT";

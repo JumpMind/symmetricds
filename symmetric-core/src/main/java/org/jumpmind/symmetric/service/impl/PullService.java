@@ -20,14 +20,16 @@
  */
 package org.jumpmind.symmetric.service.impl;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 
 import org.apache.commons.lang3.StringUtils;
+import org.jumpmind.symmetric.ISymmetricEngine;
 import org.jumpmind.symmetric.SymmetricException;
 import org.jumpmind.symmetric.Version;
 import org.jumpmind.symmetric.common.Constants;
 import org.jumpmind.symmetric.common.ParameterConstants;
-import org.jumpmind.symmetric.db.ISymmetricDialect;
 import org.jumpmind.symmetric.model.Node;
 import org.jumpmind.symmetric.model.NodeCommunication;
 import org.jumpmind.symmetric.model.NodeCommunication.CommunicationType;
@@ -38,14 +40,12 @@ import org.jumpmind.symmetric.service.ClusterConstants;
 import org.jumpmind.symmetric.service.IClusterService;
 import org.jumpmind.symmetric.service.IConfigurationService;
 import org.jumpmind.symmetric.service.IDataLoaderService;
-import org.jumpmind.symmetric.service.IExtensionService;
+import org.jumpmind.symmetric.service.IIncomingBatchService;
 import org.jumpmind.symmetric.service.INodeCommunicationService;
 import org.jumpmind.symmetric.service.INodeCommunicationService.INodeCommunicationExecutor;
 import org.jumpmind.symmetric.service.INodeService;
-import org.jumpmind.symmetric.service.IParameterService;
 import org.jumpmind.symmetric.service.IPullService;
 import org.jumpmind.symmetric.service.IRegistrationService;
-import org.jumpmind.symmetric.statistic.IStatisticManager;
 
 /**
  * @see IPullService
@@ -56,20 +56,18 @@ public class PullService extends AbstractOfflineDetectorService implements IPull
     private IClusterService clusterService;
     private INodeCommunicationService nodeCommunicationService;
     private IDataLoaderService dataLoaderService;
+    private IIncomingBatchService incomingBatchService;
     private IConfigurationService configurationService;
 
-    public PullService(IParameterService parameterService, ISymmetricDialect symmetricDialect,
-            INodeService nodeService, IDataLoaderService dataLoaderService,
-            IRegistrationService registrationService, IClusterService clusterService,
-            INodeCommunicationService nodeCommunicationService, IConfigurationService configurationService,
-            IExtensionService extensionService, IStatisticManager statisticManager) {
-        super(parameterService, symmetricDialect, extensionService);
-        this.nodeService = nodeService;
-        this.registrationService = registrationService;
-        this.clusterService = clusterService;
-        this.nodeCommunicationService = nodeCommunicationService;
-        this.dataLoaderService = dataLoaderService;
-        this.configurationService = configurationService;
+    public PullService(ISymmetricEngine engine) {
+        super(engine.getParameterService(), engine.getSymmetricDialect(), engine.getExtensionService());
+        nodeService = engine.getNodeService();
+        registrationService = engine.getRegistrationService();
+        clusterService = engine.getClusterService();
+        nodeCommunicationService = engine.getNodeCommunicationService();
+        dataLoaderService = engine.getDataLoaderService();
+        incomingBatchService = engine.getIncomingBatchService();
+        configurationService = engine.getConfigurationService();
     }
 
     synchronized public RemoteNodeStatuses pullData(boolean force) {
@@ -86,6 +84,7 @@ public class PullService extends AbstractOfflineDetectorService implements IPull
                         List<NodeCommunication> nodes = nodeCommunicationService.list(CommunicationType.PULL);
                         int availableThreads = nodeCommunicationService.getAvailableThreads(CommunicationType.PULL);
                         boolean m2mLoadInProgress = configurationService.isMasterToMaster() && nodeService.isDataLoadStarted();
+                        nodes = filterForReadyQueues(nodes);
                         for (NodeCommunication nodeCommunication : nodes) {
                             NodeSecurity nodeSecurity = nodeService.findNodeSecurity(nodeCommunication.getNodeId(), true);
                             boolean meetsMinimumTime = true;
@@ -120,6 +119,20 @@ public class PullService extends AbstractOfflineDetectorService implements IPull
             }
         }
         return statuses;
+    }
+
+    protected List<NodeCommunication> filterForReadyQueues(List<NodeCommunication> nodes) {
+        List<NodeCommunication> filteredNodes = nodes;
+        if (parameterService.is(ParameterConstants.SYNC_USE_READY_QUEUES)) {
+            filteredNodes = new ArrayList<NodeCommunication>();
+            for (NodeCommunication nodeCommunication : nodes) {
+                Collection<String> readyQueues = incomingBatchService.getReadyQueues(nodeCommunication.getNodeId());
+                if (nodeCommunication.getQueue().equals(Constants.QUEUE_DEFAULT) || readyQueues.contains(nodeCommunication.getQueue())) {
+                    filteredNodes.add(nodeCommunication);
+                }
+            }
+        }
+        return filteredNodes;
     }
 
     public void execute(NodeCommunication nodeCommunication, RemoteNodeStatus status) {

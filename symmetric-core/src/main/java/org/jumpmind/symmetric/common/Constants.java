@@ -84,6 +84,9 @@ final public class Constants {
     public static final String CHANNEL_FILESYNC = "filesync";
     public static final String CHANNEL_FILESYNC_RELOAD = "filesync_reload";
     public static final String CHANNEL_DYNAMIC = "dynamic";
+    public static final String QUEUE_DEFAULT = "default";
+    public static final String QUEUE_RELOAD = "reload";
+    public static final String DELIMITER_QUEUE_THREAD = "!";
     public static final String PUSH_JOB_TIMER = "job.push";
     public static final String PULL_JOB_TIMER = "job.pull";
     public static final String ROUTE_JOB_TIMER = "job.routing";

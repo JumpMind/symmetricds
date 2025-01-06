@@ -22,14 +22,12 @@ package org.jumpmind.symmetric.web;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
 import org.apache.commons.lang3.StringUtils;
+import org.jumpmind.symmetric.common.Constants;
 import org.jumpmind.symmetric.common.ParameterConstants;
 import org.jumpmind.symmetric.model.ChannelMap;
 import org.jumpmind.symmetric.model.Node;
@@ -48,6 +46,10 @@ import org.jumpmind.symmetric.service.IRegistrationService;
 import org.jumpmind.symmetric.statistic.IStatisticManager;
 import org.jumpmind.symmetric.transport.IOutgoingTransport;
 import org.jumpmind.symmetric.transport.TransportUtils;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Handles data pulls from other nodes.
@@ -114,6 +116,9 @@ public class PullUriHandler extends AbstractCompressionUriHandler {
                             nodeService.findIdentityNodeId(), map.getChannelQueue(), nodeId, ProcessType.PULL_HANDLER_EXTRACT));
                     try {
                         Node targetNode = nodeService.findNode(nodeId, true);
+                        if (Constants.QUEUE_DEFAULT.equals(map.getChannelQueue())) {
+                            addReadyQueuesHeader(nodeId, res);
+                        }
                         List<OutgoingBatch> batchList = dataExtractorService.extract(processInfo, targetNode,
                                 map.getChannelQueue(), outgoingTransport);
                         logDataReceivedFromPull(targetNode, batchList, processInfo, remoteHost);
@@ -134,6 +139,16 @@ public class PullUriHandler extends AbstractCompressionUriHandler {
         } finally {
             statisticManager.incrementNodesPulled(1);
             statisticManager.incrementTotalNodesPulledTime(System.currentTimeMillis() - ts);
+        }
+        log.debug("Pull completed for {} at remote address {} for queue {}", nodeId, remoteAddress, map.getChannelQueue());
+    }
+
+    private void addReadyQueuesHeader(String nodeId, HttpServletResponse res) {
+        if (parameterService.is(ParameterConstants.SYNC_USE_READY_QUEUES)) {
+            Collection<String> readyQueues = outgoingBatchService.getReadyQueues(nodeId, false);
+            String readyQueuesHeader = StringUtils.joinWith(",", readyQueues.toArray());
+            log.debug("Ready queues for node {}: {}", nodeId, readyQueuesHeader);
+            res.setHeader(WebConstants.HEADER_READY_QUEUES, readyQueuesHeader);
         }
     }
 
@@ -156,9 +171,7 @@ public class PullUriHandler extends AbstractCompressionUriHandler {
             }
         }
         if (batchesCount > 0) {
-            log.info(
-                    "{} data and {} batches sent during pull request from {}",
-                    new Object[] { dataCount, batchesCount, targetNode.toString() });
+            log.info("{} data and {} batches sent during pull request from {}", dataCount, batchesCount, targetNode);
         }
     }
 }

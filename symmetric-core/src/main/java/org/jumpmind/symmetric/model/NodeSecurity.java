@@ -39,6 +39,10 @@ public class NodeSecurity implements Serializable {
     private Date initialLoadEndTime;
     private long initialLoadId;
     private String initialLoadCreateBy;
+    private Date partialLoadTime;
+    private Date partialLoadEndTime;
+    private long partialLoadId;
+    private String partialLoadCreateBy;
     private boolean revInitialLoadEnabled;
     private Date revInitialLoadTime;
     private long revInitialLoadId;
@@ -173,6 +177,38 @@ public class NodeSecurity implements Serializable {
 
     public long getInitialLoadId() {
         return initialLoadId;
+    }
+
+    public Date getPartialLoadTime() {
+        return partialLoadTime;
+    }
+
+    public void setPartialLoadTime(Date partialLoadTime) {
+        this.partialLoadTime = partialLoadTime;
+    }
+
+    public Date getPartialLoadEndTime() {
+        return partialLoadEndTime;
+    }
+
+    public void setPartialLoadEndTime(Date partialLoadEndTime) {
+        this.partialLoadEndTime = partialLoadEndTime;
+    }
+
+    public long getPartialLoadId() {
+        return partialLoadId;
+    }
+
+    public void setPartialLoadId(long partialLoadId) {
+        this.partialLoadId = partialLoadId;
+    }
+
+    public String getPartialLoadCreateBy() {
+        return partialLoadCreateBy;
+    }
+
+    public void setPartialLoadCreateBy(String partialLoadCreateBy) {
+        this.partialLoadCreateBy = partialLoadCreateBy;
     }
 
     public void setRevInitialLoadCreateBy(String revInitialLoadCreateBy) {

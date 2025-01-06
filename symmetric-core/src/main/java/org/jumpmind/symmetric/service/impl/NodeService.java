@@ -744,13 +744,14 @@ public class NodeService extends AbstractService implements INodeService {
                 security.getInitialLoadTime(), security.getInitialLoadEndTime(), security.getCreatedAtNodeId(),
                 security.isRevInitialLoadEnabled() ? 1 : 0, security.getRevInitialLoadTime(), security.getInitialLoadId(),
                 security.getInitialLoadCreateBy(), security.getRevInitialLoadId(), security.getRevInitialLoadCreateBy(),
-                security.getFailedLogins(), security.getNodeId() };
+                security.getFailedLogins(), security.getPartialLoadTime(), security.getPartialLoadEndTime(),
+                security.getPartialLoadId(), security.getPartialLoadCreateBy(), security.getNodeId() };
         int[] types = new int[] { Types.VARCHAR, Types.INTEGER, Types.TIMESTAMP,
                 Types.TIMESTAMP, Types.TIMESTAMP, Types.INTEGER,
                 Types.TIMESTAMP, Types.TIMESTAMP, Types.VARCHAR,
                 Types.INTEGER, Types.TIMESTAMP, Types.BIGINT,
                 Types.VARCHAR, Types.BIGINT, Types.VARCHAR,
-                Types.INTEGER, Types.VARCHAR };
+                Types.INTEGER, Types.TIMESTAMP, Types.TIMESTAMP, symmetricDialect.getSqlTypeForIds(), Types.VARCHAR, Types.VARCHAR };
         if (StringUtils.isBlank(security.getNodePassword())) {
             sql = sql.replace("node_password = ?,", "");
             values = ArrayUtils.subarray(values, 1, values.length);
@@ -844,6 +845,51 @@ public class NodeService extends AbstractService implements INodeService {
         }
     }
 
+    public boolean setPartialLoadStarted(ISqlTransaction transaction, String nodeId, long loadId, String createBy) {
+        NodeSecurity nodeSecurity = findOrCreateNodeSecurity(nodeId);
+        if (nodeSecurity != null) {
+            nodeSecurity.setPartialLoadId(loadId);
+            nodeSecurity.setPartialLoadTime(new Date());
+            nodeSecurity.setPartialLoadEndTime(null);
+            nodeSecurity.setPartialLoadCreateBy(createBy);
+            return updateNodeSecurity(transaction, nodeSecurity);
+        }
+        return false;
+    }
+
+    public boolean setPartialLoadEnded(ISqlTransaction transaction, String nodeId) {
+        boolean isAutoCommit = false;
+        try {
+            if (transaction == null) {
+                transaction = sqlTemplate.startSqlTransaction();
+                isAutoCommit = true;
+            }
+            NodeSecurity nodeSecurity = findOrCreateNodeSecurity(nodeId);
+            boolean isUpdated = false;
+            if (nodeSecurity != null) {
+                nodeSecurity.setPartialLoadEndTime(new Date());
+                isUpdated = updateNodeSecurity(transaction, nodeSecurity);
+            }
+            if (isAutoCommit) {
+                transaction.commit();
+            }
+            return isUpdated;
+        } catch (Error ex) {
+            if (isAutoCommit && transaction != null) {
+                transaction.rollback();
+            }
+            throw ex;
+        } catch (RuntimeException ex) {
+            if (isAutoCommit && transaction != null) {
+                transaction.rollback();
+            }
+            throw ex;
+        } finally {
+            if (isAutoCommit) {
+                close(transaction);
+            }
+        }
+    }
     public boolean setReverseInitialLoadEnabled(ISqlTransaction transaction, String nodeId, boolean initialLoadEnabled, boolean syncChange,
             long loadId, String createBy) {
         try {
@@ -1115,6 +1161,12 @@ public class NodeService extends AbstractService implements INodeService {
             nodeSecurity.setRevInitialLoadId(rs.getLong("rev_initial_load_id"));
             nodeSecurity.setRevInitialLoadCreateBy(rs.getString("rev_initial_load_create_by"));
             nodeSecurity.setFailedLogins(rs.getInt("failed_logins"));
+            if (rs.containsKey("partial_load_id")) {
+                nodeSecurity.setPartialLoadId(rs.getLong("partial_load_id"));
+                nodeSecurity.setPartialLoadTime(rs.getDateTime("partial_load_time"));
+                nodeSecurity.setPartialLoadEndTime(rs.getDateTime("partial_load_end_time"));
+                nodeSecurity.setPartialLoadCreateBy(rs.getString("partial_load_create_by"));
+            }
             return nodeSecurity;
         }
     }

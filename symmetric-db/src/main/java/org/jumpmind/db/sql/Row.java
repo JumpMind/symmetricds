@@ -197,6 +197,17 @@ public class Row extends LinkedCaseInsensitiveMap<Object> {
         }
     }
 
+    public Integer getInteger(String columnName) {
+        Object obj = this.get(columnName);
+        if (obj instanceof Number) {
+            return ((Number) obj).intValue();
+        } else if (obj instanceof String) {
+            return Integer.parseInt(obj.toString());
+        } else {
+            return null;
+        }
+    }
+
     public long getLong(String columnName) {
         Object obj = this.get(columnName);
         if (obj instanceof Number) {

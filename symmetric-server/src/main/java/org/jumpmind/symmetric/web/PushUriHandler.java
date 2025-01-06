@@ -24,10 +24,6 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
-
 import org.jumpmind.symmetric.model.Node;
 import org.jumpmind.symmetric.service.IDataLoaderService;
 import org.jumpmind.symmetric.service.INodeService;
@@ -35,6 +31,10 @@ import org.jumpmind.symmetric.service.IParameterService;
 import org.jumpmind.symmetric.service.RegistrationPendingException;
 import org.jumpmind.symmetric.service.RegistrationRequiredException;
 import org.jumpmind.symmetric.statistic.IStatisticManager;
+
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Handles data pushes from nodes.
@@ -59,8 +59,8 @@ public class PushUriHandler extends AbstractUriHandler {
         log.debug("Push requested from node {} at remote address {}", nodeId, req.getRemoteAddr());
         InputStream inputStream = createInputStream(req);
         OutputStream outputStream = res.getOutputStream();
-        String threadChannel = req.getHeader(WebConstants.CHANNEL_QUEUE);
-        int rc = push(nodeId, threadChannel, inputStream, outputStream);
+        String channelQueue = req.getHeader(WebConstants.CHANNEL_QUEUE);
+        int rc = push(nodeId, channelQueue, inputStream, outputStream);
         if (rc != WebConstants.SC_OK) {
             res.sendError(rc);
         }
@@ -68,11 +68,11 @@ public class PushUriHandler extends AbstractUriHandler {
         log.debug("Push completed for {} at remote address {}", nodeId, req.getRemoteAddr());
     }
 
-    protected int push(String sourceNodeId, String channelId, InputStream inputStream, OutputStream outputStream) throws IOException {
+    protected int push(String sourceNodeId, String channelQueue, InputStream inputStream, OutputStream outputStream) throws IOException {
         long ts = System.currentTimeMillis();
         try {
             Node sourceNode = nodeService.findNode(sourceNodeId, true);
-            dataLoaderService.loadDataFromPush(sourceNode, channelId, inputStream, outputStream);
+            dataLoaderService.loadDataFromPush(sourceNode, channelQueue, inputStream, outputStream);
         } catch (RegistrationPendingException e) {
             return WebConstants.REGISTRATION_PENDING;
         } catch (RegistrationRequiredException e) {

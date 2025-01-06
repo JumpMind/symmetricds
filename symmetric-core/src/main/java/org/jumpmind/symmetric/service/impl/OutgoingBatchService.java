@@ -22,10 +22,12 @@ package org.jumpmind.symmetric.service.impl;
 
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -37,9 +39,10 @@ import org.jumpmind.db.sql.ISqlTransaction;
 import org.jumpmind.db.sql.Row;
 import org.jumpmind.db.sql.mapper.LongMapper;
 import org.jumpmind.db.sql.mapper.StringMapper;
+import org.jumpmind.symmetric.ISymmetricEngine;
+import org.jumpmind.symmetric.cache.ICacheManager;
 import org.jumpmind.symmetric.common.Constants;
 import org.jumpmind.symmetric.common.ParameterConstants;
-import org.jumpmind.symmetric.db.ISymmetricDialect;
 import org.jumpmind.symmetric.ext.IOutgoingBatchFilter;
 import org.jumpmind.symmetric.model.AbstractBatch.Status;
 import org.jumpmind.symmetric.model.Channel;
@@ -51,14 +54,15 @@ import org.jumpmind.symmetric.model.NodeSecurity;
 import org.jumpmind.symmetric.model.OutgoingBatch;
 import org.jumpmind.symmetric.model.OutgoingBatchSummary;
 import org.jumpmind.symmetric.model.OutgoingBatches;
+import org.jumpmind.symmetric.model.ReadyChannels;
 import org.jumpmind.symmetric.service.FilterCriterion;
 import org.jumpmind.symmetric.service.IClusterService;
 import org.jumpmind.symmetric.service.IConfigurationService;
 import org.jumpmind.symmetric.service.IExtensionService;
 import org.jumpmind.symmetric.service.INodeService;
 import org.jumpmind.symmetric.service.IOutgoingBatchService;
-import org.jumpmind.symmetric.service.IParameterService;
 import org.jumpmind.symmetric.service.ISequenceService;
+import org.jumpmind.symmetric.util.QueueThread;
 import org.jumpmind.util.AppUtils;
 import org.jumpmind.util.FormatUtils;
 
@@ -71,16 +75,16 @@ public class OutgoingBatchService extends AbstractService implements IOutgoingBa
     private ISequenceService sequenceService;
     private IClusterService clusterService;
     private IExtensionService extensionService;
+    private ICacheManager cacheManager;
 
-    public OutgoingBatchService(IParameterService parameterService, ISymmetricDialect symmetricDialect, INodeService nodeService,
-            IConfigurationService configurationService, ISequenceService sequenceService, IClusterService clusterService,
-            IExtensionService extensionService) {
-        super(parameterService, symmetricDialect);
-        this.nodeService = nodeService;
-        this.configurationService = configurationService;
-        this.sequenceService = sequenceService;
-        this.clusterService = clusterService;
-        this.extensionService = extensionService;
+    public OutgoingBatchService(ISymmetricEngine engine) {
+        super(engine.getParameterService(), engine.getSymmetricDialect());
+        this.nodeService = engine.getNodeService();
+        this.configurationService = engine.getConfigurationService();
+        this.sequenceService = engine.getSequenceService();
+        this.clusterService = engine.getClusterService();
+        this.extensionService = engine.getExtensionService();
+        this.cacheManager = engine.getCacheManager();
         setSqlMap(new OutgoingBatchServiceSqlMap(symmetricDialect.getPlatform(), createSqlReplacementTokens()));
     }
 
@@ -283,9 +287,6 @@ public class OutgoingBatchService extends AbstractService implements IOutgoingBa
 
     public void updateOutgoingSetupBatchStatusByStatus(ISqlTransaction transaction, String targetNodeId, long loadId,
             long maxBatchId, String fromStatus, String toStatus) {
-        // update $(outgoing_batch)
-        // set status=?, last_update_time=?, last_update_hostname=?
-        // where node_id=? and load_id=? and status=? and batch_id < ?
         transaction.prepareAndExecute(getSql("updateOutgoingSetupBatchStatusByStatus"),
                 new Object[] { toStatus, new Date(), clusterService.getServerId(),
                         targetNodeId, loadId, fromStatus, maxBatchId },
@@ -295,9 +296,6 @@ public class OutgoingBatchService extends AbstractService implements IOutgoingBa
 
     public void updateOutgoingLoadBatchStatusByStatus(ISqlTransaction transaction, String targetNodeId, long loadId,
             long startDataBatchId, long endDataBatchId, String fromStatus, String toStatus) {
-        // update $(outgoing_batch)
-        // set status=?, last_update_time=?, last_update_hostname=?
-        // where node_id=? and load_id=? and status=? and batch_id between ? and ?
         transaction.prepareAndExecute(getSql("updateOutgoingLoadBatchStatusByStatus"),
                 new Object[] { toStatus, new Date(), clusterService.getServerId(),
                         targetNodeId, loadId, fromStatus, startDataBatchId, endDataBatchId },
@@ -307,9 +305,6 @@ public class OutgoingBatchService extends AbstractService implements IOutgoingBa
 
     public void updateOutgoingFinalizeBatchStatusByStatus(ISqlTransaction transaction, String targetNodeId, long loadId,
             long minBatchId, String fromStatus, String toStatus) {
-        // update $(outgoing_batch)
-        // set status=?, last_update_time=?, last_update_hostname=?
-        // where node_id=? and load_id=? and status=? and batch_id > ?
         transaction.prepareAndExecute(getSql("updateOutgoingFinalizeBatchStatusByStatus"),
                 new Object[] { toStatus, new Date(), clusterService.getServerId(),
                         targetNodeId, loadId, fromStatus, minBatchId },
@@ -593,7 +588,17 @@ public class OutgoingBatchService extends AbstractService implements IOutgoingBa
         String sql = null;
         Object[] params = null;
         int[] types = null;
-        if (eventAction != null) {
+        QueueThread queueThread = new QueueThread(channelThread);
+        channelThread = queueThread.getQueueName();
+        if (channelThread != null && channelThread.equals(Constants.QUEUE_RELOAD) && queueThread.isUsingThreading()) {
+            sql = getSql("selectOutgoingBatchPrefixSql", "selectOutgoingBatchByThreadSql");
+            params = new Object[] { nodeId, Constants.CHANNEL_RELOAD, OutgoingBatch.Status.RQ.name(), OutgoingBatch.Status.NE.name(),
+                    OutgoingBatch.Status.QY.name(), OutgoingBatch.Status.SE.name(), OutgoingBatch.Status.LD.name(),
+                    OutgoingBatch.Status.ER.name(), OutgoingBatch.Status.IG.name(), OutgoingBatch.Status.RS.name(), queueThread.getThreadId() };
+            types = new int[] { Types.VARCHAR, Types.VARCHAR, Types.CHAR, Types.CHAR, Types.CHAR, Types.CHAR, Types.CHAR, Types.CHAR,
+                    Types.CHAR, Types.CHAR, Types.INTEGER };
+            log.debug("Querying outgoing batches on reload for thread {}", queueThread.getThreadId());
+        } else if (eventAction != null) {
             if (eventAction.equals(defaultEventAction)) {
                 sql = getSql("selectOutgoingBatchPrefixSql", "selectOutgoingBatchChannelActionNullSql");
             } else {
@@ -819,6 +824,49 @@ public class OutgoingBatchService extends AbstractService implements IOutgoingBa
                 Status.ER.name(), Status.LD.name(), Status.QY.name(), Status.RS.name(), Status.SE.name());
     }
 
+    @Override
+    public Collection<String> getReadyQueues(String nodeId, boolean refreshCache) {
+        Collection<String> queues = null;
+        if (parameterService.is(ParameterConstants.SYNC_USE_READY_QUEUES)) {
+            queues = cacheManager.getReadyQueues(refreshCache).get(nodeId);
+        }
+        if (queues == null) {
+            queues = new HashSet<>();
+        }
+        return queues;
+    }
+
+    @Override
+    public Map<String, Collection<String>> getReadyQueues(boolean refreshCache) {
+        Map<String, Collection<String>> readyQueuesMap = null;
+        if (parameterService.is(ParameterConstants.SYNC_USE_READY_QUEUES)) {
+            readyQueuesMap = cacheManager.getReadyQueues(refreshCache);
+        } else {
+            readyQueuesMap = new HashMap<>();
+        }
+        return readyQueuesMap;
+    }
+
+    @Override
+    public Map<String, ReadyChannels> getReadyChannelsFromDb() {
+        List<Row> rows = sqlTemplateDirty.query(getSql("selectReadyChannels"), new Object[] {
+                OutgoingBatch.Status.NE.name(), OutgoingBatch.Status.QY.name(), OutgoingBatch.Status.SE.name(), OutgoingBatch.Status.LD.name(),
+                OutgoingBatch.Status.ER.name(), OutgoingBatch.Status.IG.name(), OutgoingBatch.Status.RS.name() });
+        Map<String, ReadyChannels> readyChannelMap = new HashMap<>();
+        for (Row row : rows) {
+            String nodeId = row.getString("node_id");
+            String channelId = row.getString("channel_id");
+            Integer threadId = row.getInteger("thread_id");
+            ReadyChannels channels = readyChannelMap.get(nodeId);
+            if (channels == null) {
+                channels = new ReadyChannels(nodeId);
+                readyChannelMap.put(nodeId, channels);
+            }
+            channels.add(channelId, threadId);
+        }
+        return readyChannelMap;
+    }
+
     static class OutgoingBatchSummaryMapper implements ISqlRowMapper<OutgoingBatchSummary> {
         boolean withNode = false;
         boolean withChannel = false;
@@ -935,6 +983,7 @@ public class OutgoingBatchService extends AbstractService implements IOutgoingBa
                     batch.setMissingDeleteCount(rs.getLong("missing_delete_count"));
                     batch.setSkipCount(rs.getLong("skip_count"));
                     batch.setBulkLoaderFlag(rs.getBoolean("bulk_loader_flag"));
+                    batch.setThreadId(rs.getInteger("thread_id"));
                 }
                 return batch;
             } else {

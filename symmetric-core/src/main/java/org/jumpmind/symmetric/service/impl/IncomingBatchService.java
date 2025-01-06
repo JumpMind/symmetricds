@@ -22,8 +22,10 @@ package org.jumpmind.symmetric.service.impl;
 
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -53,6 +55,7 @@ import org.jumpmind.util.FormatUtils;
  */
 public class IncomingBatchService extends AbstractService implements IIncomingBatchService {
     protected IClusterService clusterService;
+    protected Map<String, Collection<String>> readyQueuesCache = new HashMap<>();
 
     @Override
     public List<String> getNodesInError() {
@@ -475,6 +478,20 @@ public class IncomingBatchService extends AbstractService implements IIncomingBa
     @Override
     public List<BatchId> getAllBatches() {
         return sqlTemplateDirty.query(getSql("getAllBatchesSql"), new BatchIdMapper());
+    }
+
+    @Override
+    public Collection<String> getReadyQueues(String sourceNodeId) {
+        Collection<String> queues = readyQueuesCache.get(sourceNodeId);
+        if (queues == null) {
+            queues = new HashSet<String>();
+        }
+        return queues;
+    }
+
+    @Override
+    public void setReadyQueues(String sourceNodeId, Collection<String> queues) {
+        readyQueuesCache.put(sourceNodeId, queues);
     }
 
     static class BatchIdMapper implements ISqlRowMapper<BatchId> {

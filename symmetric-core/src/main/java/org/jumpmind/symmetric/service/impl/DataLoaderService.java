@@ -40,6 +40,7 @@ import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
@@ -224,7 +225,7 @@ public class DataLoaderService extends AbstractService implements IDataLoaderSer
                 InternalIncomingTransport transport = new InternalIncomingTransport(
                         new BufferedReader(new StringReader(batchData)));
                 List<IncomingBatch> list = loadDataFromTransport(processInfo,
-                        nodeService.findIdentity(), transport, null);
+                        nodeService.findIdentity(), transport, null, null);
                 processInfo.setStatus(ProcessInfo.ProcessStatus.OK);
                 return list;
             } catch (IOException ex) {
@@ -244,8 +245,7 @@ public class DataLoaderService extends AbstractService implements IDataLoaderSer
      */
     public RemoteNodeStatus loadDataFromPull(Node remote, String queue) throws IOException {
         RemoteNodeStatus status = new RemoteNodeStatus(remote != null ? remote.getNodeId() : null,
-                queue,
-                configurationService.getChannels(false));
+                queue, configurationService.getChannels(false));
         loadDataFromPull(remote, status);
         return status;
     }
@@ -294,7 +294,7 @@ public class DataLoaderService extends AbstractService implements IDataLoaderSer
             ProcessInfo transferInfo = statisticManager.newProcessInfo(new ProcessInfoKey(remote
                     .getNodeId(), status.getQueue(), local.getNodeId(), PULL_JOB_TRANSFER));
             try {
-                List<IncomingBatch> list = loadDataFromTransport(transferInfo, remote, transport, null);
+                List<IncomingBatch> list = loadDataFromTransport(transferInfo, remote, transport, null, status);
                 if (list.size() > 0) {
                     transferInfo.setStatus(ProcessInfo.ProcessStatus.ACKING);
                     status.updateIncomingStatus(list);
@@ -388,7 +388,7 @@ public class DataLoaderService extends AbstractService implements IDataLoaderSer
                     .getNodeId(), queue, local != null ? local.getNodeId() : null, PUSH_HANDLER_TRANSFER));
             try {
                 List<IncomingBatch> batchList = loadDataFromTransport(transferInfo, sourceNode,
-                        new InternalIncomingTransport(in), out);
+                        new InternalIncomingTransport(in), out, null);
                 logDataReceivedFromPush(sourceNode, batchList, transferInfo);
                 if (local == null) {
                     local = nodeService.findIdentity(false);
@@ -460,7 +460,7 @@ public class DataLoaderService extends AbstractService implements IDataLoaderSer
                 .getNodeId(), local.getNodeId(), OFFLINE_PULL));
         List<IncomingBatch> list = null;
         try {
-            list = loadDataFromTransport(processInfo, remote, transport, null);
+            list = loadDataFromTransport(processInfo, remote, transport, null, null);
             if (list.size() > 0) {
                 processInfo.setStatus(ProcessInfo.ProcessStatus.ACKING);
                 status.updateIncomingStatus(list);
@@ -495,7 +495,7 @@ public class DataLoaderService extends AbstractService implements IDataLoaderSer
             try {
                 log.info("Requesting current configuration {symmetricVersion={}, configVersion={}}",
                         Version.version(), local.getConfigVersion());
-                List<IncomingBatch> list = loadDataFromTransport(processInfo, remote, transport, null);
+                List<IncomingBatch> list = loadDataFromTransport(processInfo, remote, transport, null, null);
                 if (containsError(list)) {
                     processInfo.setStatus(ProcessInfo.ProcessStatus.ERROR);
                 } else {
@@ -524,7 +524,7 @@ public class DataLoaderService extends AbstractService implements IDataLoaderSer
     }
 
     public List<IncomingBatch> loadDataFromTransport(ProcessInfo processInfo, Node sourceNode, IIncomingTransport transport) throws IOException {
-        return loadDataFromTransport(processInfo, sourceNode, transport, null);
+        return loadDataFromTransport(processInfo, sourceNode, transport, null, null);
     }
 
     /**
@@ -532,7 +532,7 @@ public class DataLoaderService extends AbstractService implements IDataLoaderSer
      * sent later.
      */
     protected List<IncomingBatch> loadDataFromTransport(final ProcessInfo transferInfo,
-            final Node sourceNode, IIncomingTransport transport, OutputStream out) throws IOException {
+            final Node sourceNode, IIncomingTransport transport, OutputStream out, RemoteNodeStatus status) throws IOException {
         final ManageIncomingBatchListener listener = new ManageIncomingBatchListener(transferInfo, engine);
         final DataContext ctx = new DataContext();
         Throwable error = null;
@@ -568,6 +568,7 @@ public class DataLoaderService extends AbstractService implements IDataLoaderSer
                 try {
                     stageWriter = new SimpleStagingDataWriter(transferInfo, transport.openReader(), engine, Constants.STAGING_CATEGORY_INCOMING,
                             memoryThresholdInBytes, BatchType.LOAD, targetNodeId, ctx, loadListener);
+                    notifyQueuesReady(status, transport);
                     stageWriter.process();
                 } finally {
                     /* Previously submitted tasks will still be executed */
@@ -608,6 +609,7 @@ public class DataLoaderService extends AbstractService implements IDataLoaderSer
                                     ((ManageIncomingBatchListener) listener).getCurrentBatch().isRetry());
                         }
                     };
+                    notifyQueuesReady(status, transport);
                     processor.process(ctx);
                     loadInfo.setStatus(ProcessStatus.OK);
                 } catch (Throwable e) {
@@ -617,6 +619,9 @@ public class DataLoaderService extends AbstractService implements IDataLoaderSer
             }
         } catch (Throwable ex) {
             error = ex;
+            if (status != null) {
+                status.setStatus(RemoteNodeStatus.Status.DATA_ERROR);
+            }
             if (parameterService.is(ParameterConstants.AUTO_RESOLVE_FOREIGN_KEY_VIOLATION_REVERSE_RELOAD)
                     && listener.getCurrentBatch() != null && listener.isNewErrorForCurrentBatch()
                     && listener.getCurrentBatch().isLoadFlag()
@@ -645,6 +650,19 @@ public class DataLoaderService extends AbstractService implements IDataLoaderSer
             batchesProcessed.add(new IncomingBatch());
         }
         return batchesProcessed;
+    }
+
+    private void notifyQueuesReady(RemoteNodeStatus status, IIncomingTransport transport) {
+        if (status != null && Constants.QUEUE_DEFAULT.equals(status.getQueue())) {
+            Map<String, String> headers = transport.getHeaders();
+            if (headers != null) {
+                String queues = headers.get(WebConstants.HEADER_READY_QUEUES);
+                if (queues != null) {
+                    log.debug("Received ready queues from node {}: {}", status.getNodeId(), queues);
+                    incomingBatchService.setReadyQueues(status.getNodeId(), Arrays.asList(queues.split("\\s*,\\s*")));
+                }
+            }
+        }
     }
 
     private void awaitTermination(ExecutorService executor) throws InterruptedException {
