@@ -51,6 +51,7 @@ import org.jumpmind.symmetric.model.Node;
 import org.jumpmind.symmetric.model.NodeChannel;
 import org.jumpmind.symmetric.model.OutgoingBatch;
 import org.jumpmind.symmetric.model.Router;
+import org.jumpmind.symmetric.model.TableReloadRequest;
 import org.jumpmind.symmetric.model.TriggerHistory;
 import org.jumpmind.symmetric.model.TriggerRouter;
 import org.jumpmind.symmetric.route.DefaultDataRouter;
@@ -179,12 +180,16 @@ public class SelectFromTableSource extends SelectFromSource {
                     if (fk != null) {
                         Reference[] refs = fk.getReferences();
                         if (refs.length == 1) {
-                            isSelfReferencingFk = true;
-                            selfRefParentColumnName = refs[0].getLocalColumnName();
-                            selfRefChildColumnName = refs[0].getForeignColumnName();
-                            selfRefLevel = 0;
-                            log.info("Ordering rows for table {} using self-referencing foreign key {} -> {}",
-                                    sourceTable.getName(), selfRefParentColumnName, selfRefChildColumnName);
+                            TableReloadRequest loadRequest = dataService.getTableReloadRequest(outgoingBatch.getLoadId());
+                            if (loadRequest == null || !loadRequest.isCreateTable() ||
+                                    !parameterService.is(ParameterConstants.INITIAL_LOAD_DEFER_CREATE_CONSTRAINTS)) {
+                                isSelfReferencingFk = true;
+                                selfRefParentColumnName = refs[0].getLocalColumnName();
+                                selfRefChildColumnName = refs[0].getForeignColumnName();
+                                selfRefLevel = 0;
+                                log.info("Ordering rows for table {} using self-referencing foreign key {} -> {}",
+                                        sourceTable.getName(), selfRefParentColumnName, selfRefChildColumnName);
+                            }
                         } else {
                             log.warn("Unable to order rows for self-referencing foreign key because it contains multiple columns");
                         }
