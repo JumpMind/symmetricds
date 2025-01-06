@@ -308,7 +308,10 @@ public class NodeCommunicationService extends AbstractService implements INodeCo
                     Node node = iter.next();
                     if ((parm.getNodeGroupId().equals(ParameterConstants.ALL) || parm.getNodeGroupId().equals(node.getNodeGroupId()) &&
                             (parm.getExternalId().equals(ParameterConstants.ALL) || parm.getExternalId().equals(node.getExternalId())))) {
-                        iter.remove();
+                        if (parm.getValue() != null &&
+                                Boolean.valueOf(parm.getValue())) {
+                            iter.remove();
+                        }
                     }
                 }
             }

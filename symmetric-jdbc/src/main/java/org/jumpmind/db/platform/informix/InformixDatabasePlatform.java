@@ -27,6 +27,7 @@ import java.util.Map;
 import javax.sql.DataSource;
 
 import org.apache.commons.lang3.StringUtils;
+import org.jumpmind.db.model.Column;
 import org.jumpmind.db.platform.AbstractJdbcDatabasePlatform;
 import org.jumpmind.db.platform.DatabaseNamesConstants;
 import org.jumpmind.db.platform.IDatabasePlatform;
@@ -72,14 +73,17 @@ public class InformixDatabasePlatform extends AbstractJdbcDatabasePlatform imple
         return false;
     }
 
+    @Override
     public String getName() {
         return DatabaseNamesConstants.INFORMIX;
     }
 
+    @Override
     public String getDefaultCatalog() {
         return defaultCatalog;
     }
 
+    @Override
     public String getDefaultSchema() {
         if (StringUtils.isBlank(defaultSchema)) {
             defaultSchema = getSqlTemplate().queryForObject("select trim(user) from sysmaster:sysdual", String.class);
@@ -93,7 +97,8 @@ public class InformixDatabasePlatform extends AbstractJdbcDatabasePlatform imple
     }
 
     @Override
-    public boolean isClob(int type) {
+    public boolean isClob(Column column) {
+        int type = column.getMappedTypeCode();
         return type == Types.CLOB;
     }
 

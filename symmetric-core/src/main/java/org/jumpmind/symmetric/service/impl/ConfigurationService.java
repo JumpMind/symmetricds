@@ -103,8 +103,14 @@ public class ConfigurationService extends AbstractService implements IConfigurat
 
     @Override
     public boolean isBulkLoaderEnabled() {
-        List<Channel> channelList = sqlTemplate.query(getSql("selectChannelsSql", "whereBulkLoaderEnabledSql"), new ChannelMapper());
-        return channelList != null && !channelList.isEmpty();
+        boolean enabled = false;
+        for (Channel channel : getChannels(false).values()) {
+            if (channel.isReloadFlag() && channel.getDataLoaderType().equals("bulk")) {
+                enabled = true;
+                break;
+            }
+        }
+        return enabled;
     }
 
     @Override
@@ -454,6 +460,12 @@ public class ConfigurationService extends AbstractService implements IConfigurat
     private void deleteChannel(String id) {
         sqlTemplate.update(getSql("deleteNodeChannelSql"), new Object[] { id });
         sqlTemplate.update(getSql("deleteChannelSql"), new Object[] { id });
+        clearCache();
+    }
+
+    @Override
+    public void deleteNodeChannelControl(String nodeId, String channelId) {
+        sqlTemplate.update(getSql("deleteNodeChannelControlSql"), new Object[] { nodeId, channelId });
         clearCache();
     }
 

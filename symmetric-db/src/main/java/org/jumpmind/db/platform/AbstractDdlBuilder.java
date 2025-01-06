@@ -2030,7 +2030,7 @@ public abstract class AbstractDdlBuilder implements IDdlBuilder {
         String targetSize = targetColumn.getSize();
         int targetScale = targetColumn.getScale();
         PlatformColumn platformTargetColumn = targetColumn.findPlatformColumn(databaseName);
-        if (platformTargetColumn != null) {
+        if (platformTargetColumn != null && !platformTargetColumn.isUserDefinedType()) {
             targetSize = String.valueOf(platformTargetColumn.getSize() == -1 ? 0 : platformTargetColumn.getSize());
             targetScale = platformTargetColumn.getDecimalDigits() == -1 ? 0 : platformTargetColumn.getDecimalDigits();
             if (scaleMatters) {
@@ -2049,7 +2049,7 @@ public abstract class AbstractDdlBuilder implements IDdlBuilder {
         String sourceSize = sourceColumn.getSize();
         int sourceScale = sourceColumn.getScale();
         PlatformColumn platformSourceColumn = sourceColumn.findPlatformColumn(databaseName);
-        if (platformSourceColumn != null) {
+        if (platformSourceColumn != null && !platformSourceColumn.isUserDefinedType()) {
             sourceSize = String.valueOf(platformSourceColumn.getSize());
             sourceScale = platformSourceColumn.getDecimalDigits() == -1 ? 0 : platformSourceColumn.getDecimalDigits();
             if (scaleMatters) {

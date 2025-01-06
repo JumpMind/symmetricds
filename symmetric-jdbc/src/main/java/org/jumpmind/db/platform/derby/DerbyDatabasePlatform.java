@@ -91,23 +91,27 @@ public class DerbyDatabasePlatform extends AbstractJdbcDatabasePlatform {
         return false;
     }
 
+    @Override
     public String getName() {
         return DatabaseNamesConstants.DERBY;
     }
 
+    @Override
     public String getDefaultSchema() {
         if (StringUtils.isBlank(defaultSchema)) {
-            defaultSchema = (String) getSqlTemplate().queryForObject("values CURRENT SCHEMA", String.class);
+            defaultSchema = getSqlTemplate().queryForObject("values CURRENT SCHEMA", String.class);
         }
         return defaultSchema;
     }
 
+    @Override
     public String getDefaultCatalog() {
         return "";
     }
 
     @Override
-    public boolean isClob(int type) {
+    public boolean isClob(Column column) {
+        int type = column.getMappedTypeCode();
         return type == Types.CLOB;
     }
 

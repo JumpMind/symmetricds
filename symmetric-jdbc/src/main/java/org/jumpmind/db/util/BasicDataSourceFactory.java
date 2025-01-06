@@ -99,7 +99,9 @@ public class BasicDataSourceFactory {
                         + BasicDataSourcePropertyConstants.DB_POOL_USER + " property.   Please re-encrypt your user", ex);
             }
         }
-        dataSource.setUsername(user);
+        if (! StringUtils.isEmpty(user)) {
+            dataSource.setUsername(user);
+        }
         String password = properties.get(BasicDataSourcePropertyConstants.DB_POOL_PASSWORD, "");
         if (password != null && password.startsWith(SecurityConstants.PREFIX_ENC)) {
             try {
@@ -110,7 +112,9 @@ public class BasicDataSourceFactory {
                         + BasicDataSourcePropertyConstants.DB_POOL_PASSWORD + " property.   Please re-encrypt your password", ex);
             }
         }
-        dataSource.setPassword(password);
+        if (! StringUtils.isEmpty(password)) {
+            dataSource.setPassword(password);
+        }
         dataSource.setInitialSize(properties.getInt(
                 BasicDataSourcePropertyConstants.DB_POOL_INITIAL_SIZE, 2));
         dataSource.setMaxTotal(properties.getInt(

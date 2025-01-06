@@ -78,8 +78,6 @@ public class ConfigurationServiceSqlMap extends AbstractSqlMap {
         putSql("orderChannelsBySql", "order by c.processing_order asc, c.channel_id");
         
         putSql("whereChannelIdLikeSql", "where channel_id like ?");
-        
-        putSql("whereBulkLoaderEnabledSql", "where data_loader_type='bulk' and reload_flag=1");
 
         putSql("selectNodeChannelsSql",
             "select c.channel_id, c.processing_order,       "
@@ -124,6 +122,8 @@ public class ConfigurationServiceSqlMap extends AbstractSqlMap {
         putSql("deleteAllChannelsSql", "delete from $(channel)");
 
         putSql("deleteNodeChannelSql", "delete from $(node_channel_ctl) where channel_id=?   ");
+
+        putSql("deleteNodeChannelControlSql", "delete from $(node_channel_ctl) where node_id=? and channel_id=?");
 
         putSql("selectNodeGroupChannelWindowSql",
                 "select node_group_id, channel_id, start_time, end_time, enabled                    "

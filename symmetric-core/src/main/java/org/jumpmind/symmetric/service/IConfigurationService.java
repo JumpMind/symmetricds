@@ -82,6 +82,8 @@ public interface IConfigurationService {
 
     public void deleteAllChannels();
 
+    public void deleteNodeChannelControl(String nodeId, String channelId);
+
     public List<NodeGroupChannelWindow> getNodeGroupChannelWindows(String nodeGroupId, String channelId);
 
     public Map<String, List<NodeGroupChannelWindow>> getNodeGroupChannelWindowsFromDb();

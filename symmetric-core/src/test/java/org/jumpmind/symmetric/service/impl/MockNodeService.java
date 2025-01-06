@@ -407,4 +407,8 @@ public class MockNodeService implements INodeService {
     public boolean setPartialLoadEnded(ISqlTransaction transaction, String nodeId) {
         return false;
     }
+
+    @Override
+    public void deleteNodeHostInstance(String nodeId, String instanceId) {
+    }
 }

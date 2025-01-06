@@ -76,7 +76,7 @@ public class CassandraPlatform extends AbstractDatabasePlatform {
     }
 
     @Override
-    public boolean isLob(int type) {
+    public boolean isLob(Column column) {
         return false;
     }
 
