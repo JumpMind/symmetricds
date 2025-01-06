@@ -460,6 +460,21 @@ public class SymmetricAdmin extends AbstractCommandLauncher {
         return args.remove(0);
     }
 
+    @Override
+    protected String scrubCommandLine(String[] cmdArgs) {
+        boolean scrubNextArg = false;
+        for (int i = 0; i < cmdArgs.length; i++) {
+            String arg = cmdArgs[i];
+            if (scrubNextArg) {
+                cmdArgs[i] = "***";
+                scrubNextArg = false;
+            } else if (arg != null && (arg.equals(CMD_ENCRYPT_TEXT) || arg.equals(CMD_OBFUSCATE_TEXT) || arg.equals(CMD_UNOBFUSCATE_TEXT))) {
+                scrubNextArg = true;
+            }
+        }
+        return super.scrubCommandLine(cmdArgs);
+    }
+
     private void importConfig(CommandLine line, List<String> args) {
         String fileName = popArg(args, "file name");
         try {

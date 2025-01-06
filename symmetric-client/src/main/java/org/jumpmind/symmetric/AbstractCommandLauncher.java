@@ -48,8 +48,8 @@ import org.jumpmind.symmetric.common.ParameterConstants;
 import org.jumpmind.symmetric.common.ServerConstants;
 import org.jumpmind.symmetric.common.SystemConstants;
 import org.jumpmind.symmetric.transport.TransportManagerFactory;
-import org.jumpmind.symmetric.util.PropertiesUtil;
 import org.jumpmind.symmetric.util.LogSummaryAppenderUtils;
+import org.jumpmind.symmetric.util.PropertiesUtil;
 import org.jumpmind.util.AppUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -145,13 +145,11 @@ public abstract class AbstractCommandLauncher {
             configurePropertiesFile(line);
             String[] cmdArgs = line.getArgs();
             if (cmdArgs != null) {
-                log.info("Command: {}", ArrayUtils.toString(cmdArgs));
+                log.info("Command: {}", scrubCommandLine(cmdArgs));
             }
             if (line.getOptions() != null) {
                 for (Option option : line.getOptions()) {
-                    log.info("Option: name={}, value={}", new Object[] {
-                            option.getLongOpt() != null ? option.getLongOpt() : option.getOpt(),
-                            ArrayUtils.toString(option.getValues()) });
+                    log.info("Option: name={}, value={}", option.getLongOpt() != null ? option.getLongOpt() : option.getOpt(), scrubOptionValues(option));
                 }
             }
             executeWithOptions(line);
@@ -170,6 +168,18 @@ public abstract class AbstractCommandLauncher {
                     .println("-------------------------------------------------------------------------------");
             System.exit(1);
         }
+    }
+
+    protected String scrubCommandLine(String[] cmdArgs) {
+        return ArrayUtils.toString(cmdArgs);
+    }
+
+    protected String scrubOptionValues(Option option) {
+        String name = option.getLongOpt() != null ? option.getLongOpt() : option.getOpt();
+        if (name != null && name.equals(OPTION_KEYSTORE_PASSWORD)) {
+            return "***";
+        }
+        return ArrayUtils.toString(option.getValues());
     }
 
     protected void printHelp(CommandLine cmd, Options options) {

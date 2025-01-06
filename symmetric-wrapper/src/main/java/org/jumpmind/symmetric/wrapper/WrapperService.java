@@ -119,7 +119,7 @@ public abstract class WrapperService {
         if (success) {
             System.out.println("Started");
         } else {
-            System.err.println(commandToString(cmdLine));
+            System.err.println(scrubCommand(commandToString(cmdLine)));
             if (output.size() > 0) {
                 for (String line : output) {
                     System.err.println(line);
@@ -174,7 +174,7 @@ public abstract class WrapperService {
             int serverPid = 0;
             while (keepRunning) {
                 if (startProcess) {
-                    logger.log(Level.INFO, "Executing " + cmdString);
+                    logger.log(Level.INFO, "Executing " + scrubCommand(cmdString));
                     if (startCount == 0) {
                         updateStatus(Status.START_PENDING);
                     }
@@ -276,6 +276,12 @@ public abstract class WrapperService {
                 ex2.printStackTrace();
             }
         }
+    }
+
+    protected String scrubCommand(String cmdLine) {
+        cmdLine = cmdLine.replaceFirst("(-Djavax.net.ssl.keyStorePassword)=\\S+", "$1=***");
+        cmdLine = cmdLine.replaceFirst("(-Djavax.net.ssl.trustStorePassword)=\\S+", "$1=***");
+        return cmdLine;
     }
 
     protected void initEnvironment(ProcessBuilder pb) {
