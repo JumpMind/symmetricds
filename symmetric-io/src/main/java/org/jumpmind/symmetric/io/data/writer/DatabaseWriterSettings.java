@@ -65,6 +65,8 @@ public class DatabaseWriterSettings {
     protected boolean ignoreSqlDataEventFailures = false;
     protected boolean createIndexConvertUniqueToNonuniqueWhenColumnsNotRequired = true;
     protected boolean stripOutCommentsInScripts = true;
+    protected String runtimeConfigTablePrefix = "sym";
+    protected boolean createTableIncludeApplicationTriggers = false;
 
     public void setAlterDatabaseInterceptors(IAlterDatabaseInterceptor[] alterDatabaseInterceptors) {
         this.alterDatabaseInterceptors = alterDatabaseInterceptors;
@@ -383,5 +385,21 @@ public class DatabaseWriterSettings {
 
     public void setStripOutCommentsInScripts(boolean stripOutCommentsInScripts) {
         this.stripOutCommentsInScripts = stripOutCommentsInScripts;
+    }
+
+    public String getRuntimeConfigTablePrefix() {
+        return runtimeConfigTablePrefix;
+    }
+
+    public void setRuntimeConfigTablePrefix(String runtimeConfigTablePrefix) {
+        this.runtimeConfigTablePrefix = runtimeConfigTablePrefix;
+    }
+
+    public boolean isCreateTableIncludeApplicationTriggers() {
+        return createTableIncludeApplicationTriggers;
+    }
+
+    public void setCreateTableIncludeApplicationTriggers(boolean createTableIncludeApplicationTriggers) {
+        this.createTableIncludeApplicationTriggers = createTableIncludeApplicationTriggers;
     }
 }

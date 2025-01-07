@@ -26,6 +26,7 @@ import java.util.Set;
 
 import org.jumpmind.db.model.Database;
 import org.jumpmind.db.model.ForeignKey;
+import org.jumpmind.db.model.PlatformTrigger;
 import org.jumpmind.db.model.Table;
 import org.jumpmind.db.model.Trigger;
 import org.jumpmind.db.sql.ISqlTransaction;
@@ -50,8 +51,12 @@ public interface IDdlReader {
     public List<String> getColumnNames(String catalog, String schema, String tableName);
 
     public List<Trigger> getTriggers(String catalog, String schema, String tableName);
+    
+    public List<Trigger> getApplicationTriggersForModel(String catalog, String schema, String tableName, String symTablePrefix);
 
     public Trigger getTriggerFor(Table table, String name);
+    
+    public PlatformTrigger getPlatformTrigger(IDatabasePlatform platform, Trigger trigger);
 
     public Collection<ForeignKey> getExportedKeys(Table table);
 
