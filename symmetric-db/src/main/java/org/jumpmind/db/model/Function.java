@@ -24,7 +24,7 @@ public class Function implements Cloneable, Serializable {
     }
 
     public Function() {
-    };
+    }
 
     public String getFunctionName() {
         return functionName;
@@ -65,7 +65,7 @@ public class Function implements Cloneable, Serializable {
     public void setTriggerName(String triggerName) {
         this.triggerName = triggerName;
     }
-    
+
     public void removePlatformFunction(String databaseName) {
         if (platformFunctions != null) {
             platformFunctions.remove(databaseName);
@@ -154,11 +154,11 @@ public class Function implements Cloneable, Serializable {
         }
         return result;
     }
-    
+
     public String getFullyQualifiedName() {
         return getFullyQualifiedName(catalogName, schemaName, tableName, triggerName);
     }
-    
+
     public static String getFullyQualifiedName(String catalog, String schema, String tableName, String functionName) {
         String fullName = "";
         if (catalog != null)
