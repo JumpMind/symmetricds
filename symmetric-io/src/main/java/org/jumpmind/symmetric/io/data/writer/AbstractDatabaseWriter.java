@@ -411,7 +411,7 @@ abstract public class AbstractDatabaseWriter implements IDataWriter {
     protected abstract boolean sql(CsvData data);
 
     protected abstract void logFailureDetails(Throwable e, CsvData data, boolean logLastDmlDetails);
-    
+
     protected abstract void logFailureDetails(Throwable e, CsvData data, boolean logLastDmlDetails, Object[] values);
 
     protected String[] getRowData(CsvData data, String dataType) {

@@ -85,9 +85,9 @@ class AbstractTriggerTemplateTest {
         }
         Table table = new Table(defaultCatalog + "." + defaultSchema + "." + tableName, allColumns);
         table.addIndex(uniqueIndex);
-        return table ;
+        return table;
     }
-    
+
     @Test
     void testPrimaryKeyJoin_UniqueIndexWith1NullableColumn() {
         // Arrange
@@ -161,7 +161,7 @@ class AbstractTriggerTemplateTest {
         String uniqueColumnName = table.getColumn(0).getName();
         String templateDdl = "$(varOldPrimaryKeyJoin)";
         // Act
-        String triggerDdl = triggerTemplate.replaceTemplateVariables(DataEventType.UPDATE, trigger, triggerHistory, channel, tablePrefix, table,targetTable,
+        String triggerDdl = triggerTemplate.replaceTemplateVariables(DataEventType.UPDATE, trigger, triggerHistory, channel, tablePrefix, table, targetTable,
                 defaultCatalog, defaultSchema, templateDdl);
         // Assert
         // OLD> String expectedPkJoin = "deleted.\"" + uniqueColumnName + "\"=@oldpk0";

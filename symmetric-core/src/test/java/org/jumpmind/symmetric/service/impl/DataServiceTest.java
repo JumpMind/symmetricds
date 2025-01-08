@@ -103,7 +103,6 @@ public class DataServiceTest {
     TableReloadRequest request;
     ISymmetricEngine engine;
     IDatabasePlatform platform;
-
     public final String strandedTableName = "sym_node_host";
     public final String strandedChannelId = "heartbeat";
     public final String strandedColumnNames = "node_id,host_name,instance_id";
@@ -441,240 +440,236 @@ public class DataServiceTest {
         dataService.getTableReloadRequest(0);
     }
 
-@Test
-public void recaptureStranded_Insert_ExistingRow() throws Exception {
-    String strandedRowData = "I1, bobo, abc", pkData = "I1, bobo", actualRowData = "I1, bobo, abc";
-    setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.INSERT, strandedRowData, pkData, null,
-            actualRowData);
-    int recapturedCount = dataService.reCaptureData(1, 1);
-    verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
-    verify(sqlTransaction, times(1)).queryForObject("queryPk", String.class);
-    assertEquals(1, recapturedCount);
-}
+    @Test
+    public void recaptureStranded_Insert_ExistingRow() throws Exception {
+        String strandedRowData = "I1, bobo, abc", pkData = "I1, bobo", actualRowData = "I1, bobo, abc";
+        setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.INSERT, strandedRowData, pkData, null,
+                actualRowData);
+        int recapturedCount = dataService.reCaptureData(1, 1);
+        verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
+        verify(sqlTransaction, times(1)).queryForObject("queryPk", String.class);
+        assertEquals(1, recapturedCount);
+    }
 
-@Test
-public void recaptureStranded_Insert_MissingRow() throws Exception {
-    String strandedRowData = "I2, bobo, abc", pkData = "I2, bobo", actualRowData = null;
-    setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.INSERT, strandedRowData, pkData, null,
-            actualRowData);
-    int recapturedCount = dataService.reCaptureData(1, 1);
-    verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
-    verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
-    assertEquals(0, recapturedCount);
-}
+    @Test
+    public void recaptureStranded_Insert_MissingRow() throws Exception {
+        String strandedRowData = "I2, bobo, abc", pkData = "I2, bobo", actualRowData = null;
+        setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.INSERT, strandedRowData, pkData, null,
+                actualRowData);
+        int recapturedCount = dataService.reCaptureData(1, 1);
+        verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
+        verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
+        assertEquals(0, recapturedCount);
+    }
 
-@Test
-public void recaptureStranded_Insert_ExtraColumn_ExistingRow() throws Exception {
-    String strandedRowData = "I3, bobo, abc, EXTRA", pkData = "I3, bobo", actualRowData = "I3, bobo3, abc";
-    setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.INSERT, strandedRowData, pkData, null,
-            actualRowData);
-    int recapturedCount = dataService.reCaptureData(1, 1);
-    verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
-    verify(sqlTransaction, times(1)).queryForObject("queryPk", String.class);
-    assertEquals(1, recapturedCount);
-}
+    @Test
+    public void recaptureStranded_Insert_ExtraColumn_ExistingRow() throws Exception {
+        String strandedRowData = "I3, bobo, abc, EXTRA", pkData = "I3, bobo", actualRowData = "I3, bobo3, abc";
+        setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.INSERT, strandedRowData, pkData, null,
+                actualRowData);
+        int recapturedCount = dataService.reCaptureData(1, 1);
+        verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
+        verify(sqlTransaction, times(1)).queryForObject("queryPk", String.class);
+        assertEquals(1, recapturedCount);
+    }
 
+    @Test
+    public void recaptureStranded_Insert_ExtraColumn_MissingRow() throws Exception {
+        String strandedRowData = "I4, bobo, abc, EXTRA", pkData = "I4, bobo", actualRowData = null;
+        setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.INSERT, strandedRowData, pkData, null,
+                actualRowData);
+        int recapturedCount = dataService.reCaptureData(1, 1);
+        verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
+        verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
+        assertEquals(0, recapturedCount);
+    }
 
-@Test
-public void recaptureStranded_Insert_ExtraColumn_MissingRow() throws Exception {
-    String strandedRowData = "I4, bobo, abc, EXTRA", pkData = "I4, bobo", actualRowData = null;
-    setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.INSERT, strandedRowData, pkData, null,
-            actualRowData);
-    int recapturedCount = dataService.reCaptureData(1, 1);
-    verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
-    verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
-    assertEquals(0, recapturedCount);
-}
+    @Test
+    public void recaptureStranded_Insert_MissingPkColumn_MissingRow() throws Exception {
+        String strandedRowData = "I5", pkData = "I5", actualRowData = null;
+        setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.INSERT, strandedRowData, pkData, null,
+                actualRowData);
+        int recapturedCount = dataService.reCaptureData(1, 1);
+        verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
+        verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
+        assertEquals(0, recapturedCount);
+    }
 
-@Test
-public void recaptureStranded_Insert_MissingPkColumn_MissingRow() throws Exception {
-    String strandedRowData = "I5", pkData = "I5", actualRowData = null;
-    setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.INSERT, strandedRowData, pkData, null,
-            actualRowData);
-    int recapturedCount = dataService.reCaptureData(1, 1);
-    verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
-    verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
-    assertEquals(0, recapturedCount);
-}
+    @Test
+    public void recaptureStranded_Insert_MissingAllColumns_ExistingRow() throws Exception {
+        String strandedRowData = "", pkData = "MISsing", actualRowData = null;
+        setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.INSERT, strandedRowData, pkData, null,
+                actualRowData);
+        int recapturedCount = dataService.reCaptureData(1, 1);
+        verify(sqlTransaction, times(0)).queryForObject("queryData", String.class);
+        verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
+        assertEquals(0, recapturedCount);
+    }
 
-@Test
-public void recaptureStranded_Insert_MissingAllColumns_ExistingRow() throws Exception {
-    String strandedRowData = "", pkData = "MISsing", actualRowData = null;
-    setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.INSERT, strandedRowData, pkData, null,
-            actualRowData);
-    int recapturedCount = dataService.reCaptureData(1, 1);
-    verify(sqlTransaction, times(0)).queryForObject("queryData", String.class);
-    verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
-    assertEquals(0, recapturedCount);
-}
+    @Test
+    public void recaptureStranded_Insert_MissingColumn_MissingRow() throws Exception {
+        String strandedRowData = "I7, MISsing", pkData = "I7, MISsing", actualRowData = null;
+        setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.INSERT, strandedRowData, pkData, null,
+                actualRowData);
+        int recapturedCount = dataService.reCaptureData(1, 1);
+        verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
+        verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
+        assertEquals(0, recapturedCount);
+    }
 
-@Test
-public void recaptureStranded_Insert_MissingColumn_MissingRow() throws Exception {
-    String strandedRowData = "I7, MISsing", pkData = "I7, MISsing", actualRowData = null;
-    setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.INSERT, strandedRowData, pkData, null,
-            actualRowData);
-    int recapturedCount = dataService.reCaptureData(1, 1);
-    verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
-    verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
-    assertEquals(0, recapturedCount);
-}
+    @Test
+    public void recaptureStranded_Update_ExistingRow() throws Exception {
+        String strandedRowData = "U1, bobo, abc", pkData = "U1, bobo", actualRowData = "U1, bobo, abc", oldData = "U1, bobo, abc-before";
+        setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.UPDATE, strandedRowData, pkData, oldData,
+                actualRowData);
+        int recapturedCount = dataService.reCaptureData(1, 1);
+        verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
+        verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
+        assertEquals(1, recapturedCount);
+    }
 
+    @Test
+    public void recaptureStranded_Update_MissingRow() throws Exception {
+        String strandedRowData = "U2, bobo, abc", pkData = "U2, bobo", actualRowData = null, oldData = "U2, bobo, abc-before";
+        setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.UPDATE, strandedRowData, pkData, oldData,
+                actualRowData);
+        int recapturedCount = dataService.reCaptureData(1, 1);
+        verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
+        verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
+        assertEquals(0, recapturedCount);
+    }
 
-@Test
-public void recaptureStranded_Update_ExistingRow() throws Exception {
-    String strandedRowData = "U1, bobo, abc", pkData = "U1, bobo", actualRowData = "U1, bobo, abc", oldData = "U1, bobo, abc-before";
-    setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.UPDATE, strandedRowData, pkData, oldData,
-            actualRowData);
-    int recapturedCount = dataService.reCaptureData(1, 1);
-    verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
-    verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
-    assertEquals(1, recapturedCount);
-}
+    @Test
+    public void recaptureStranded_Update_ExtraColumn_ExistingRow() throws Exception {
+        String strandedRowData = "U3, bobo, abc, EXTRA", pkData = "U3, bobo", actualRowData = "U3, bobo3, abc", oldData = "U3, bobo, abc-before";
+        setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.UPDATE, strandedRowData, pkData, oldData,
+                actualRowData);
+        int recapturedCount = dataService.reCaptureData(1, 1);
+        verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
+        verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
+        assertEquals(1, recapturedCount);
+    }
 
-@Test
-public void recaptureStranded_Update_MissingRow() throws Exception {
-    String strandedRowData = "U2, bobo, abc", pkData = "U2, bobo", actualRowData = null, oldData = "U2, bobo, abc-before";
-    setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.UPDATE, strandedRowData, pkData, oldData,
-            actualRowData);
-    int recapturedCount = dataService.reCaptureData(1, 1);
-    verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
-    verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
-    assertEquals(0, recapturedCount);
-}
+    @Test
+    public void recaptureStranded_Update_ExtraColumn_MissingRow() throws Exception {
+        String strandedRowData = "U4, bobo, abc, EXTRA", pkData = "U4, bobo", actualRowData = null, oldData = "U4, bobo, abc-before, EXTRA";
+        setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.UPDATE, strandedRowData, pkData, oldData,
+                actualRowData);
+        int recapturedCount = dataService.reCaptureData(1, 1);
+        verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
+        verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
+        assertEquals(0, recapturedCount);
+    }
 
-@Test
-public void recaptureStranded_Update_ExtraColumn_ExistingRow() throws Exception {
-    String strandedRowData = "U3, bobo, abc, EXTRA", pkData = "U3, bobo", actualRowData = "U3, bobo3, abc", oldData = "U3, bobo, abc-before";
-    setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.UPDATE, strandedRowData, pkData, oldData,
-            actualRowData);
-    int recapturedCount = dataService.reCaptureData(1, 1);
-    verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
-    verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
-    assertEquals(1, recapturedCount);
-}
+    @Test
+    public void recaptureStranded_Update_MissingPkColumn_MissingRow() throws Exception {
+        String strandedRowData = "U5", pkData = "U5", actualRowData = null, oldData = "U5";
+        setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.UPDATE, strandedRowData, pkData, oldData,
+                actualRowData);
+        int recapturedCount = dataService.reCaptureData(1, 1);
+        verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
+        verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
+        assertEquals(0, recapturedCount);
+    }
 
+    @Test
+    public void recaptureStranded_Update_MissingAllColumns_ExistingRow() throws Exception {
+        String strandedRowData = null, pkData = "MISSING", actualRowData = null, oldData = null;
+        setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.UPDATE, strandedRowData, pkData, oldData,
+                actualRowData);
+        int recapturedCount = dataService.reCaptureData(1, 1);
+        verify(sqlTransaction, times(0)).queryForObject("queryData", String.class);
+        verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
+        assertEquals(0, recapturedCount);
+    }
 
-@Test
-public void recaptureStranded_Update_ExtraColumn_MissingRow() throws Exception {
-    String strandedRowData = "U4, bobo, abc, EXTRA", pkData = "U4, bobo", actualRowData = null, oldData = "U4, bobo, abc-before, EXTRA";
-    setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.UPDATE, strandedRowData, pkData, oldData,
-            actualRowData);
-    int recapturedCount = dataService.reCaptureData(1, 1);
-    verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
-    verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
-    assertEquals(0, recapturedCount);
-}
+    @Test
+    public void recaptureStranded_Update_MissingColumn_MissingRow() throws Exception {
+        String strandedRowData = "U7, MISSING3rd", pkData = "U7, MISSING3rd", actualRowData = null, oldData = "U7, MISSING3rd-before";
+        setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.UPDATE, strandedRowData, pkData, oldData,
+                actualRowData);
+        int recapturedCount = dataService.reCaptureData(1, 1);
+        verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
+        verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
+        assertEquals(0, recapturedCount);
+    }
 
-@Test
-public void recaptureStranded_Update_MissingPkColumn_MissingRow() throws Exception {
-    String strandedRowData = "U5", pkData = "U5", actualRowData = null, oldData = "U5";
-    setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.UPDATE, strandedRowData, pkData, oldData,
-            actualRowData);
-    int recapturedCount = dataService.reCaptureData(1, 1);
-    verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
-    verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
-    assertEquals(0, recapturedCount);
-}
+    @Test
+    public void recaptureStranded_Delete_ExistingRow() throws Exception {
+        String strandedRowData = null, pkData = "D1, bobo", actualRowData = "D1, bobo, abc", oldData = "D1, bobo, abc-before-delete";
+        setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.DELETE, strandedRowData, pkData, oldData,
+                actualRowData);
+        int recapturedCount = dataService.reCaptureData(1, 1);
+        verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
+        verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
+        assertEquals(0, recapturedCount);
+    }
 
-@Test
-public void recaptureStranded_Update_MissingAllColumns_ExistingRow() throws Exception {
-    String strandedRowData = null, pkData = "MISSING", actualRowData = null, oldData = null;
-    setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.UPDATE, strandedRowData, pkData, oldData,
-            actualRowData);
-    int recapturedCount = dataService.reCaptureData(1, 1);
-    verify(sqlTransaction, times(0)).queryForObject("queryData", String.class);
-    verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
-    assertEquals(0, recapturedCount);
-}
+    @Test
+    public void recaptureStranded_Delete_MissingRow() throws Exception {
+        String strandedRowData = null, pkData = "D2, bobo", actualRowData = null, oldData = "D2, bobo, abc-before-delete";
+        setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.DELETE, strandedRowData, pkData, oldData,
+                actualRowData);
+        int recapturedCount = dataService.reCaptureData(1, 1);
+        verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
+        verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
+        assertEquals(1, recapturedCount);
+    }
 
-@Test
-public void recaptureStranded_Update_MissingColumn_MissingRow() throws Exception {
-    String strandedRowData = "U7, MISSING3rd", pkData = "U7, MISSING3rd", actualRowData = null, oldData = "U7, MISSING3rd-before";
-    setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.UPDATE, strandedRowData, pkData, oldData,
-            actualRowData);
-    int recapturedCount = dataService.reCaptureData(1, 1);
-    verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
-    verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
-    assertEquals(0, recapturedCount);
-}
+    @Test
+    public void recaptureStranded_Delete_ExtraColumn_ExistingRow() throws Exception {
+        String strandedRowData = null, pkData = "D3, bobo, EXTRA", actualRowData = "D3, bobo3, abc", oldData = "D3, bobo, abc-before-delete";
+        setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.DELETE, strandedRowData, pkData, oldData,
+                actualRowData);
+        int recapturedCount = dataService.reCaptureData(1, 1);
+        verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
+        verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
+        assertEquals(0, recapturedCount);
+    }
 
-@Test
-public void recaptureStranded_Delete_ExistingRow() throws Exception {
-    String strandedRowData = null, pkData = "D1, bobo", actualRowData = "D1, bobo, abc", oldData = "D1, bobo, abc-before-delete";
-    setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.DELETE, strandedRowData, pkData, oldData,
-            actualRowData);
-    int recapturedCount = dataService.reCaptureData(1, 1);
-    verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
-    verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
-    assertEquals(0, recapturedCount);
-}
+    @Test
+    public void recaptureStranded_Delete_ExtraColumn_MissingRow() throws Exception {
+        String strandedRowData = null, pkData = "D4, bobo, EXTRA", actualRowData = null, oldData = "D4, bobo, abc-before-delete, EXTRA";
+        setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.DELETE, strandedRowData, pkData, oldData,
+                actualRowData);
+        int recapturedCount = dataService.reCaptureData(1, 1);
+        verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
+        verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
+        assertEquals(0, recapturedCount);
+    }
 
-@Test
-public void recaptureStranded_Delete_MissingRow() throws Exception {
-    String strandedRowData = null, pkData = "D2, bobo", actualRowData = null, oldData = "D2, bobo, abc-before-delete";
-    setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.DELETE, strandedRowData, pkData, oldData,
-            actualRowData);
-    int recapturedCount = dataService.reCaptureData(1, 1);
-    verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
-    verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
-    assertEquals(1, recapturedCount);
-}
+    @Test
+    public void recaptureStranded_Delete_MissingPkColumn_MissingRow() throws Exception {
+        String strandedRowData = null, pkData = "MISSING", actualRowData = null, oldData = "D5, bobo, abc-before-delete, EXTRA";
+        setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.DELETE, strandedRowData, pkData, oldData,
+                actualRowData);
+        int recapturedCount = dataService.reCaptureData(1, 1);
+        verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
+        verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
+        assertEquals(0, recapturedCount);
+    }
 
-@Test
-public void recaptureStranded_Delete_ExtraColumn_ExistingRow() throws Exception {
-    String strandedRowData = null, pkData = "D3, bobo, EXTRA", actualRowData = "D3, bobo3, abc", oldData = "D3, bobo, abc-before-delete";
-    setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.DELETE, strandedRowData, pkData, oldData,
-            actualRowData);
-    int recapturedCount = dataService.reCaptureData(1, 1);
-    verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
-    verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
-    assertEquals(0, recapturedCount);
-}
+    @Test
+    public void recaptureStranded_Delete_MissingAllColumns_ExistingRow() throws Exception {
+        String strandedRowData = null, pkData = "", actualRowData = null, oldData = "D6, bobo, abc-before-delete, EXTRA";
+        setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.DELETE, strandedRowData, pkData, oldData,
+                actualRowData);
+        int recapturedCount = dataService.reCaptureData(1, 1);
+        verify(sqlTransaction, times(0)).queryForObject("queryData", String.class);
+        verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
+        assertEquals(0, recapturedCount);
+    }
 
-@Test
-public void recaptureStranded_Delete_ExtraColumn_MissingRow() throws Exception {
-    String strandedRowData = null, pkData = "D4, bobo, EXTRA", actualRowData = null, oldData = "D4, bobo, abc-before-delete, EXTRA";
-    setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.DELETE, strandedRowData, pkData, oldData,
-            actualRowData);
-    int recapturedCount = dataService.reCaptureData(1, 1);
-    verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
-    verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
-    assertEquals(0, recapturedCount);
-}
-
-@Test
-public void recaptureStranded_Delete_MissingPkColumn_MissingRow() throws Exception {
-    String strandedRowData = null, pkData = "MISSING", actualRowData = null, oldData = "D5, bobo, abc-before-delete, EXTRA";
-    setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.DELETE, strandedRowData, pkData, oldData,
-            actualRowData);
-    int recapturedCount = dataService.reCaptureData(1, 1);
-    verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
-    verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
-    assertEquals(0, recapturedCount);
-}
-
-@Test
-public void recaptureStranded_Delete_MissingAllColumns_ExistingRow() throws Exception {
-    String strandedRowData = null, pkData = "", actualRowData = null, oldData = "D6, bobo, abc-before-delete, EXTRA";
-    setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.DELETE, strandedRowData, pkData, oldData,
-            actualRowData);
-    int recapturedCount = dataService.reCaptureData(1, 1);
-    verify(sqlTransaction, times(0)).queryForObject("queryData", String.class);
-    verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
-    assertEquals(0, recapturedCount);
-}
-
-@Test
-public void recaptureStranded_Delete_MissingColumn_MissingRow() throws Exception {
-    String strandedRowData = null, pkData = "D7, MISSING3rd", actualRowData = null, oldData = "D7, MISSING3rd-before-delete";
-    setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.DELETE, strandedRowData, pkData, oldData,
-            actualRowData);
-    int recapturedCount = dataService.reCaptureData(1, 1);
-    verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
-    verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
-    assertEquals(0, recapturedCount);
-}
-
+    @Test
+    public void recaptureStranded_Delete_MissingColumn_MissingRow() throws Exception {
+        String strandedRowData = null, pkData = "D7, MISSING3rd", actualRowData = null, oldData = "D7, MISSING3rd-before-delete";
+        setupRecapture(strandedTableName, strandedChannelId, strandedColumnNames, strandedPkNames, DataEventType.DELETE, strandedRowData, pkData, oldData,
+                actualRowData);
+        int recapturedCount = dataService.reCaptureData(1, 1);
+        verify(sqlTransaction, times(1)).queryForObject("queryData", String.class);
+        verify(sqlTransaction, times(0)).queryForObject("queryPk", String.class);
+        assertEquals(0, recapturedCount);
+    }
 
     @SuppressWarnings("unchecked")
     protected void setupRecapture(String tableName, String channelName, String columnNames, String pkNames, DataEventType dataEventType,
@@ -716,7 +711,6 @@ public void recaptureStranded_Delete_MissingColumn_MissingRow() throws Exception
                 ArgumentMatchers.any(), ArgumentMatchers.any())).thenReturn("queryPk");
         when(symmetricDialect.createCsvDataSql(ArgumentMatchers.any(), ArgumentMatchers.any(),
                 ArgumentMatchers.any(), ArgumentMatchers.any())).thenReturn("queryData");
-
         IConfigurationService configurationService = mock(IConfigurationService.class);
         when(engine.getConfigurationService()).thenReturn(configurationService);
         Row row = new Row(0);
