@@ -1613,7 +1613,7 @@ public class Table implements Serializable, Cloneable, Comparable<Table> {
         return triggers.toArray(new Trigger[triggers.size()]);
     }
 
-    public List<Trigger> getCTriggersAsList() {
+    public List<Trigger> getTriggersAsList() {
         return new ArrayList<Trigger>(this.triggers);
     }
 
