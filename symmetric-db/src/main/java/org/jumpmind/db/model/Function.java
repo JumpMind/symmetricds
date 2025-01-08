@@ -161,10 +161,12 @@ public class Function implements Cloneable, Serializable {
 
     public static String getFullyQualifiedName(String catalog, String schema, String tableName, String functionName) {
         String fullName = "";
-        if (catalog != null)
+        if (catalog != null) {
             fullName += catalog + ".";
-        if (schema != null)
+        }
+        if (schema != null) {
             fullName += schema + ".";
+        }
         fullName += tableName + "." + functionName;
         return fullName;
     }
