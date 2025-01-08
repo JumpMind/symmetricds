@@ -250,7 +250,8 @@ public abstract class AbstractDatabasePlatform implements IDatabasePlatform {
     }
 
     @Override
-    public void alterTables(boolean continueOnError, boolean createTableIncludeApplicationTriggers, String symTablePrefix, IAlterDatabaseInterceptor[] interceptors, Table... desiredTables) {
+    public void alterTables(boolean continueOnError, boolean createTableIncludeApplicationTriggers, String symTablePrefix,
+            IAlterDatabaseInterceptor[] interceptors, Table... desiredTables) {
         Database currentDatabase = new Database();
         Database desiredDatabase = new Database();
         StringBuilder tablesProcessed = new StringBuilder();
@@ -274,7 +275,6 @@ public abstract class AbstractDatabasePlatform implements IDatabasePlatform {
         }
         String alterSql = ddlBuilder.alterDatabase(currentDatabase, desiredDatabase, interceptors);
         if (StringUtils.isNotBlank(alterSql.trim())) {
-            // log.info("Running alter sql:\n{}", alterSql);
             String delimiter = getDdlBuilder().getDatabaseInfo().getSqlCommandDelimiter();
             Map<String, String> replacementTokens = new HashMap<String, String>();
             replacementTokens.put(ddlBuilder.getTriggerDelimiterReplacementCharacters(), getDdlBuilder().getDatabaseInfo().getSqlCommandDelimiter());
