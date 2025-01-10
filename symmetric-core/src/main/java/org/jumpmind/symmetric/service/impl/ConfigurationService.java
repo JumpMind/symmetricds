@@ -77,7 +77,7 @@ public class ConfigurationService extends AbstractService implements IConfigurat
                 new Channel(Constants.CHANNEL_CONFIG, 0, 2000, 10, true, 0, true));
         Channel reloadChannel;
         if (parameterService.is(ParameterConstants.INITIAL_LOAD_USE_EXTRACT_JOB)) {
-            reloadChannel = new Channel(Constants.CHANNEL_RELOAD, 1, 500000, 10, true, 0, false, true, false);
+            reloadChannel = new Channel(Constants.CHANNEL_RELOAD, 1, 100000, 10, true, 0, false, true, false);
             reloadChannel.setQueue(Constants.QUEUE_RELOAD);
         } else {
             reloadChannel = new Channel(Constants.CHANNEL_RELOAD, 1, 1, 1, true, 0, false, true, false);
