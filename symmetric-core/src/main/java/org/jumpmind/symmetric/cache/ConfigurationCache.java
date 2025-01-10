@@ -21,7 +21,9 @@
 package org.jumpmind.symmetric.cache;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 
@@ -40,6 +42,7 @@ public class ConfigurationCache {
     private Object configurationCacheLock = new Object();
     volatile private Map<String, List<NodeChannel>> nodeChannelCache;
     volatile private Map<String, Channel> channelsCache;
+    volatile private Collection<String> queuesCache;
     volatile private List<NodeGroupLink> nodeGroupLinksCache;
     volatile private Map<String, List<NodeGroupChannelWindow>> channelWindowsByChannelCache;
     volatile private long channelCacheTime;
@@ -78,19 +81,30 @@ public class ConfigurationCache {
     }
 
     public Map<String, Channel> getChannels(boolean refreshCache) {
-        long channelCacheTimeoutInMs = parameterService.getLong(
-                ParameterConstants.CACHE_TIMEOUT_CHANNEL_IN_MS, 60000);
-        if (System.currentTimeMillis() - channelCacheTime >= channelCacheTimeoutInMs
-                || channelsCache == null || refreshCache) {
+        checkChannelCache(refreshCache);
+        return channelsCache;
+    }
+
+    public Collection<String> getQueues(boolean refreshCache) {
+        checkChannelCache(refreshCache);
+        return queuesCache;
+    }
+
+    protected void checkChannelCache(boolean refreshCache) {
+        long channelCacheTimeoutInMs = parameterService.getLong(ParameterConstants.CACHE_TIMEOUT_CHANNEL_IN_MS, 60000);
+        if (System.currentTimeMillis() - channelCacheTime >= channelCacheTimeoutInMs || channelsCache == null || refreshCache) {
             synchronized (configurationCacheLock) {
-                if (System.currentTimeMillis() - channelCacheTime >= channelCacheTimeoutInMs
-                        || channelsCache == null || refreshCache) {
+                if (System.currentTimeMillis() - channelCacheTime >= channelCacheTimeoutInMs || channelsCache == null || refreshCache) {
                     channelsCache = configurationService.getChannelsFromDb();
+                    Collection<String> queues = new HashSet<String>();
+                    for (Channel channel : channelsCache.values()) {
+                        queues.add(channel.getQueue());
+                    }
+                    queuesCache = queues;
                     channelCacheTime = System.currentTimeMillis();
                 }
             }
         }
-        return channelsCache;
     }
 
     public List<NodeGroupLink> getNodeGroupLinks(boolean refreshCache) {

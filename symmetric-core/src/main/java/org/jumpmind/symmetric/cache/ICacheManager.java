@@ -90,6 +90,8 @@ public interface ICacheManager {
 
     public Map<String, Channel> getChannels(boolean refreshCache);
 
+    public Collection<String> getQueues(boolean refreshCache);
+
     public List<NodeGroupLink> getNodeGroupLinks(boolean refreshCache);
 
     public Map<String, List<NodeGroupChannelWindow>> getNodeGroupChannelWindows();

@@ -144,7 +144,7 @@ public class PullUriHandler extends AbstractCompressionUriHandler {
     }
 
     private void addReadyQueuesHeader(String nodeId, HttpServletResponse res) {
-        if (parameterService.is(ParameterConstants.SYNC_USE_READY_QUEUES)) {
+        if (parameterService.is(ParameterConstants.SYNC_USE_READY_QUEUES) && configurationService.getQueues(false).size() > 1) {
             Collection<String> readyQueues = outgoingBatchService.getReadyQueues(nodeId, false);
             String readyQueuesHeader = StringUtils.joinWith(",", readyQueues.toArray());
             log.debug("Ready queues for node {}: {}", nodeId, readyQueuesHeader);

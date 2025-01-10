@@ -75,48 +75,35 @@ public class OutgoingBatchCache {
 
     protected void populateReadyQueuesCache(long readyQueuesCacheTimeoutInMs) {
         Map<String, Channel> channelMap = configurationService.getChannels(false);
-        Collection<String> queues = getQueues(channelMap);
-        if (queues.size() == 1) {
-            readyQueuesCache = new HashMap<>();
-        } else {
-            long ts = System.currentTimeMillis();
-            Map<String, ReadyChannels> readyChannelMap = outgoingBatchService.getReadyChannelsFromDb();
-            Map<String, Collection<String>> readyQueueMap = new HashMap<>();
-            for (Map.Entry<String, ReadyChannels> entry : readyChannelMap.entrySet()) {
-                String nodeId = entry.getKey();
-                ReadyChannels readyChannels = entry.getValue();
-                for (String channelId : readyChannels.getChannelIds()) {
-                    Channel channel = channelMap.get(channelId);
-                    if (channel != null) {
-                        Collection<String> readyQueues = readyQueueMap.get(nodeId);
-                        if (readyQueues == null) {
-                            readyQueues = new HashSet<>();
-                            readyQueueMap.put(nodeId, readyQueues);
+        long ts = System.currentTimeMillis();
+        Map<String, ReadyChannels> readyChannelMap = outgoingBatchService.getReadyChannelsFromDb();
+        Map<String, Collection<String>> readyQueueMap = new HashMap<>();
+        for (Map.Entry<String, ReadyChannels> entry : readyChannelMap.entrySet()) {
+            String nodeId = entry.getKey();
+            ReadyChannels readyChannels = entry.getValue();
+            for (String channelId : readyChannels.getChannelIds()) {
+                Channel channel = channelMap.get(channelId);
+                if (channel != null) {
+                    Collection<String> readyQueues = readyQueueMap.get(nodeId);
+                    if (readyQueues == null) {
+                        readyQueues = new HashSet<>();
+                        readyQueueMap.put(nodeId, readyQueues);
+                    }
+                    if (Constants.QUEUE_RELOAD.equals(channel.getQueue()) && readyChannels.getThreadIdCount() > 0) {
+                        for (Integer threadId : readyChannels.getThreadIds()) {
+                            readyQueues.add(channel.getQueue() + Constants.DELIMITER_QUEUE_THREAD + threadId);
                         }
-                        if (Constants.QUEUE_RELOAD.equals(channel.getQueue()) && readyChannels.getThreadIdCount() > 0) {
-                            for (Integer threadId : readyChannels.getThreadIds()) {
-                                readyQueues.add(channel.getQueue() + Constants.DELIMITER_QUEUE_THREAD + threadId);
-                            }
-                        } else {
-                            readyQueues.add(channel.getQueue());
-                        }
+                    } else {
+                        readyQueues.add(channel.getQueue());
                     }
                 }
             }
-            long queryTime = System.currentTimeMillis() - ts;
-            if (queryTime > readyQueuesCacheTimeoutInMs) {
-                log.warn("Query time of {} ms exceeded cache time of {} ms for ready queues.  This means the query may run on the database constantly.",
-                        queryTime, readyQueuesCacheTimeoutInMs);
-            }
-            readyQueuesCache = readyQueueMap;
         }
-    }
-
-    protected Collection<String> getQueues(Map<String, Channel> channelMap) {
-        Collection<String> queues = new HashSet<>();
-        for (Channel channel : channelMap.values()) {
-            queues.add(channel.getQueue());
+        long queryTime = System.currentTimeMillis() - ts;
+        if (queryTime > readyQueuesCacheTimeoutInMs) {
+            log.warn("Query time of {} ms exceeded cache time of {} ms for ready queues.  This means the query may run on the database constantly.",
+                    queryTime, readyQueuesCacheTimeoutInMs);
         }
-        return queues;
+        readyQueuesCache = readyQueueMap;
     }
 }

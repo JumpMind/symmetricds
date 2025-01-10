@@ -21,6 +21,7 @@
 package org.jumpmind.symmetric.service.impl;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -667,6 +668,11 @@ public class ConfigurationService extends AbstractService implements IConfigurat
     @Override
     public Map<String, Channel> getChannels(boolean refreshCache) {
         return cacheManager.getChannels(refreshCache);
+    }
+
+    @Override
+    public Collection<String> getQueues(boolean refreshCache) {
+        return cacheManager.getQueues(refreshCache);
     }
 
     @Override

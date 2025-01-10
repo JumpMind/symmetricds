@@ -297,6 +297,12 @@ public class CacheManager implements ICacheManager {
     }
 
     @Override
+    public Collection<String> getQueues(boolean refreshCache) {
+        initializeConfigurationCache();
+        return configurationCache.getQueues(refreshCache);
+    }
+
+    @Override
     public List<NodeGroupLink> getNodeGroupLinks(boolean refreshCache) {
         initializeConfigurationCache();
         return configurationCache.getNodeGroupLinks(refreshCache);

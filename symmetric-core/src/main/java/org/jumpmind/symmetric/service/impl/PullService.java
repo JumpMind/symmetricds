@@ -123,7 +123,7 @@ public class PullService extends AbstractOfflineDetectorService implements IPull
 
     protected List<NodeCommunication> filterForReadyQueues(List<NodeCommunication> nodes) {
         List<NodeCommunication> filteredNodes = nodes;
-        if (parameterService.is(ParameterConstants.SYNC_USE_READY_QUEUES)) {
+        if (parameterService.is(ParameterConstants.SYNC_USE_READY_QUEUES) && configurationService.getQueues(false).size() > 1) {
             filteredNodes = new ArrayList<NodeCommunication>();
             for (NodeCommunication nodeCommunication : nodes) {
                 Collection<String> readyQueues = incomingBatchService.getReadyQueues(nodeCommunication.getNodeId());

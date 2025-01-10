@@ -432,8 +432,7 @@ abstract public class AbstractService implements IService {
             if (!batchInfo.isOk()) {
                 batchIdInError = batchInfo.getBatchId();
             }
-            log.debug("Saving ack: {}, {}", batchInfo.getBatchId(),
-                    (batchInfo.isOk() ? "OK" : "ER"));
+            log.debug("Saving ack: {}, {}", batchInfo.getBatchId(), (batchInfo.isResend() ? "RS" : batchInfo.isOk() ? "OK" : "ER"));
             acknowledgeService.ack(batchInfo);
         }
         for (Long batchId : batchIds) {

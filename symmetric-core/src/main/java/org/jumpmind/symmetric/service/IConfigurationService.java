@@ -20,6 +20,7 @@
  */
 package org.jumpmind.symmetric.service;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 
@@ -103,6 +104,8 @@ public interface IConfigurationService {
     public List<Channel> getFileSyncChannels();
 
     public Map<String, Channel> getChannels(boolean refreshCache);
+
+    public Collection<String> getQueues(boolean refreshCache);
 
     public Map<String, Channel> getChannelsFromDb();
 
