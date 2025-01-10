@@ -364,7 +364,7 @@ public class DataExtractorService extends AbstractService implements IDataExtrac
                             batches.removeNonLoadBatches();
                             log.info("Removing non-load batches from queue {} for target node {} because load ID {} was found", queue, targetNode,
                                     status.getLoadId());
-                        }                        
+                        }
                     }
                 }
             }

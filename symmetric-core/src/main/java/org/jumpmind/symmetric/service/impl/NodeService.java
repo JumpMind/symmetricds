@@ -890,6 +890,7 @@ public class NodeService extends AbstractService implements INodeService {
             }
         }
     }
+
     public boolean setReverseInitialLoadEnabled(ISqlTransaction transaction, String nodeId, boolean initialLoadEnabled, boolean syncChange,
             long loadId, String createBy) {
         try {

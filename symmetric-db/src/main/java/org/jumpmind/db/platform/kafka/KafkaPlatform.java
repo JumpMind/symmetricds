@@ -67,5 +67,4 @@ public class KafkaPlatform extends AbstractDatabasePlatform {
     public ISqlTemplate getSqlTemplateDirty() {
         return new KafkaSqlTemplate();
     }
-
 }
