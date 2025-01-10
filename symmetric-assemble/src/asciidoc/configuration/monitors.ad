@@ -65,7 +65,7 @@ be compared to a threshold value.
 
 |channelsDisabled|Number of channels that are disabled.|✔
 
-|maxBatchSize|Largest Max Batch Size for a channel.|✔
+|maxBatchSize|Largest Max Batch Size for a channel (excluding reload channels).|✔
 
 |maxDataToRoute|Largest Max Data to Route for a channel.|✔
 
