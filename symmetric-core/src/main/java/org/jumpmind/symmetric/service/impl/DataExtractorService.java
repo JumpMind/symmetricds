@@ -1171,6 +1171,10 @@ public class DataExtractorService extends AbstractService implements IDataExtrac
             writer.end(batch, false);
         } finally {
             writer.close();
+            IStagedResource resource = getStagedResource(currentBatch);
+            if (resource != null) {
+                resource.setState(State.DONE);
+            }
         }
     }
 
@@ -1195,7 +1199,7 @@ public class DataExtractorService extends AbstractService implements IDataExtrac
     }
 
     protected boolean isRetry(OutgoingBatch currentBatch, Node remoteNode) {
-        if (currentBatch.getSentCount() > 0 && currentBatch.getStatus() != OutgoingBatch.Status.RS) {
+        if (currentBatch.getSentCount() > 0 && currentBatch.getStatus() != OutgoingBatch.Status.RS && currentBatch.getStatus() != OutgoingBatch.Status.IG) {
             boolean offline = parameterService.is(ParameterConstants.NODE_OFFLINE, false);
             boolean cclient = StringUtils.equals(remoteNode.getDeploymentType(), Constants.DEPLOYMENT_TYPE_CCLIENT);
             if (remoteNode.isVersionGreaterThanOrEqualTo(3, 8, 0) && !offline && !cclient) {
@@ -1260,7 +1264,8 @@ public class DataExtractorService extends AbstractService implements IDataExtrac
                                 }
                             }
                         }
-                    } else if (!isRetry && engine.getConfigurationService().isUseSourceStagingEnabled(targetNode.getNodeId())) {
+                    } else if (!isRetry && engine.getConfigurationService().isUseSourceStagingEnabled(targetNode.getNodeId()) &&
+                            currentBatch.getStatus() != OutgoingBatch.Status.IG) {
                         ISymmetricEngine targetEngine = AbstractSymmetricEngine.findEngineByNodeId(targetNode.getNodeId());
                         if (targetEngine != null) {
                             isRetry = true;
