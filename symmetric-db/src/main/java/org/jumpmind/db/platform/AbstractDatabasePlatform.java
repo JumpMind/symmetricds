@@ -253,20 +253,22 @@ public abstract class AbstractDatabasePlatform implements IDatabasePlatform {
     public void alterTables(boolean continueOnError, boolean createTableIncludeApplicationTriggers, String symTablePrefix,
             IAlterDatabaseInterceptor[] interceptors, Table... desiredTables) {
         Database currentDatabase = new Database();
+        currentDatabase.setName(getName());
         Database desiredDatabase = new Database();
+        desiredDatabase.setName(getName());
         StringBuilder tablesProcessed = new StringBuilder();
         for (Table table : desiredTables) {
             tablesProcessed.append(table.getFullyQualifiedTableName());
             tablesProcessed.append(", ");
             desiredDatabase.addTable(table);
             Table currentTable = ddlReader.readTable(table.getCatalog(), table.getSchema(), table.getName());
-            if (createTableIncludeApplicationTriggers) {
-                List<Trigger> triggers = ddlReader.getApplicationTriggersForModel(table.getCatalog(), table.getSchema(), table.getName(), symTablePrefix);
-                if (triggers != null && triggers.size() > 0) {
-                    currentTable.addTriggers(triggers);
-                }
-            }
             if (currentTable != null) {
+                if (createTableIncludeApplicationTriggers) {
+                    List<Trigger> triggers = ddlReader.getApplicationTriggersForModel(table.getCatalog(), table.getSchema(), table.getName(), symTablePrefix);
+                    if (triggers != null && triggers.size() > 0) {
+                        currentTable.addTriggers(triggers);
+                    }
+                }
                 currentDatabase.addTable(currentTable);
             }
         }

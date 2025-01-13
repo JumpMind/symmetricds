@@ -337,6 +337,7 @@ public class ModelComparator {
             Database targetModel, Table targetTable, ArrayList<IModelChange> changes) {
         Map<String, Trigger> sourceTriggersMap = new HashMap<String, Trigger>();
         Map<String, Trigger> targetTriggersMap = new HashMap<String, Trigger>();
+        String platformName = targetModel.getName();
         if (sourceTable.getTriggers() != null) {
             for (Trigger trigger : sourceTable.getTriggers()) {
                 sourceTriggersMap.put(trigger.getName(), trigger);
@@ -351,7 +352,6 @@ public class ModelComparator {
             Trigger sourceTrigger = entry.getValue();
             if (targetTriggersMap.containsKey(entry.getKey())) {
                 Trigger targetTrigger = targetTriggersMap.get(entry.getKey());
-                String platformName = getPlatformName(targetTrigger);
                 if (sourceTrigger.getPlatformTriggers().containsKey(platformName)) {
                     PlatformTrigger targetPlatformTrigger = targetTrigger.findPlatformTrigger(platformName);
                     PlatformTrigger sourcePlatformTrigger = sourceTrigger.findPlatformTrigger(platformName);
@@ -368,7 +368,6 @@ public class ModelComparator {
                 }
             } else {
                 changes.add(new RemoveTriggerChange(sourceTable, sourceTrigger));
-                String platformName = getPlatformName(sourceTrigger);
                 if (sourceTrigger.getPlatformTriggers().containsKey(platformName)) {
                     PlatformTrigger sourcePlatformTrigger = sourceTrigger.findPlatformTrigger(platformName);
                     Function sourceFunction = sourcePlatformTrigger.getFunction();
@@ -381,7 +380,6 @@ public class ModelComparator {
         for (Map.Entry<String, Trigger> entry : targetTriggersMap.entrySet()) {
             if (!sourceTriggersMap.containsKey(entry.getKey())) {
                 Trigger targetTrigger = entry.getValue();
-                String platformName = getPlatformName(targetTrigger);
                 if (targetTrigger.getPlatformTriggers().containsKey(platformName)) {
                     PlatformTrigger platformTrigger = targetTrigger.getPlatformTriggers().get(platformName);
                     Function targetFunction = platformTrigger.getFunction();
@@ -392,15 +390,6 @@ public class ModelComparator {
                 changes.add(new AddTriggerChange(targetTable, entry.getValue()));
             }
         }
-    }
-    
-    private String getPlatformName(Trigger trigger) {
-        String platformModelName = null;
-        if (trigger.getPlatformTriggers() != null && trigger.getPlatformTriggers().size() > 0) {
-            PlatformTrigger platformTrigger = trigger.getPlatformTriggers().values().iterator().next();
-            platformModelName = platformTrigger.getName();
-        }
-        return platformModelName;
     }
     
     private String getFunctionText(PlatformTrigger platformTrigger, String databaseName) {
