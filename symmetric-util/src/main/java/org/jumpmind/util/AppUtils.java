@@ -71,7 +71,6 @@ public class AppUtils {
             }
         } else {
             url = AppUtils.class.getResource(resourceName);
-            log.info("url {}", url);
             if (url != null) {
                 try (InputStream fis = url.openStream()) {
                     prop.load(fis);
