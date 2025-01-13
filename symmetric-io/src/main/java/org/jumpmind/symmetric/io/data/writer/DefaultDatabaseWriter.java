@@ -690,15 +690,6 @@ public class DefaultDatabaseWriter extends AbstractDatabaseWriter {
                     }
                 }
             }
-            // if (writerSettings.isCreateTableIncludeApplicationTriggers()) {
-            // for (Table table : db.getTables()) {
-            // List<org.jumpmind.db.model.Trigger> triggers = platform.getDdlReader().getApplicationTriggersForModel(table.getCatalog(), table.getSchema(),
-            // table.getName(), writerSettings.getRuntimeConfigTablePrefix());
-            // if (triggers != null && triggers.size() > 0) {
-            // table.addTriggers(triggers);
-            // }
-            // }
-            // }
             if (writerSettings.isAlterTable()) {
                 getTargetPlatform().alterTables(!writerSettings.isCreateTableFailOnError(), writerSettings.isCreateTableIncludeApplicationTriggers(),
                         writerSettings.getRuntimeConfigTablePrefix(), writerSettings.getAlterDatabaseInterceptors(), db.getTables());
