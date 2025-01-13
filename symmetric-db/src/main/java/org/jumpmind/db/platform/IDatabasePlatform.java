@@ -127,13 +127,13 @@ public interface IDatabasePlatform {
     public void createTables(boolean dropTablesFirst,
             boolean continueOnError, Table... tables);
 
-    public void alterDatabase(Database desiredDatabase, String symTablePrefix, boolean continueOnError);
+    public void alterDatabase(Database desiredDatabase, String triggerPrefix, boolean continueOnError);
 
-    public void alterDatabase(Database desiredDatabase, String symTablePrefix, boolean continueOnError, IAlterDatabaseInterceptor[] interceptors);
+    public void alterDatabase(Database desiredDatabase, String triggerPrefix, boolean continueOnError, IAlterDatabaseInterceptor[] interceptors);
 
     public void alterTables(boolean continueOnError, Table... desiredTables);
 
-    public void alterTables(boolean continueOnError, boolean createTableIncludeApplicationTriggers, String symTablePrefix,
+    public void alterTables(boolean continueOnError, boolean createTableIncludeApplicationTriggers, String triggerPrefix,
             IAlterDatabaseInterceptor[] interceptors, Table... desiredTables);
 
     public void dropDatabase(Database database, boolean continueOnError);

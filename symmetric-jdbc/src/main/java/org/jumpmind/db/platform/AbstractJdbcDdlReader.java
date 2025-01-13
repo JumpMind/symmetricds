@@ -156,10 +156,10 @@ public abstract class AbstractJdbcDdlReader implements IDdlReader {
     }
     
     @Override
-    public List<Trigger> getApplicationTriggersForModel(String catalog, String schema, String tableName, String symTablePrefix) {
+    public List<Trigger> getApplicationTriggersForModel(String catalog, String schema, String tableName, String triggerPrefix) {
         List<org.jumpmind.db.model.Trigger> triggers = platform.getDdlReader().getTriggers(catalog, schema, tableName)
                 .stream()
-                .filter(t -> ! t.getName().toUpperCase().startsWith(symTablePrefix.toUpperCase() + "_"))
+                .filter(t -> ! t.getName().toUpperCase().startsWith(triggerPrefix.toUpperCase() + "_"))
                 .collect(Collectors.toList());
         
         if (triggers != null && triggers.size() > 0) {

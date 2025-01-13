@@ -109,7 +109,7 @@ public class KafkaDdlReader implements IDdlReader {
     }
     
     @Override
-    public List<Trigger> getApplicationTriggersForModel(String catalog, String schema, String tableName, String symTablePrefix) {
+    public List<Trigger> getApplicationTriggersForModel(String catalog, String schema, String tableName, String triggerPrefix) {
         return new ArrayList<Trigger>(0);
     }
     

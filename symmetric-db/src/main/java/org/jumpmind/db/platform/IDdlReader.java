@@ -52,7 +52,7 @@ public interface IDdlReader {
 
     public List<Trigger> getTriggers(String catalog, String schema, String tableName);
     
-    public List<Trigger> getApplicationTriggersForModel(String catalog, String schema, String tableName, String symTablePrefix);
+    public List<Trigger> getApplicationTriggersForModel(String catalog, String schema, String tableName, String triggerPrefix);
 
     public Trigger getTriggerFor(Table table, String name);
     

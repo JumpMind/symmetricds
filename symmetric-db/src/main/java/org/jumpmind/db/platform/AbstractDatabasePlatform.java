@@ -235,13 +235,13 @@ public abstract class AbstractDatabasePlatform implements IDatabasePlatform {
     }
 
     @Override
-    public void alterDatabase(Database desiredDatabase, String symTablePrefix, boolean continueOnError, IAlterDatabaseInterceptor[] interceptors) {
-        alterTables(continueOnError, false, symTablePrefix, interceptors, desiredDatabase.getTables());
+    public void alterDatabase(Database desiredDatabase, String triggerPrefix, boolean continueOnError, IAlterDatabaseInterceptor[] interceptors) {
+        alterTables(continueOnError, false, triggerPrefix, interceptors, desiredDatabase.getTables());
     }
 
     @Override
-    public void alterDatabase(Database desiredDatabase, String symTablePrefix, boolean continueOnError) {
-        alterDatabase(desiredDatabase, symTablePrefix, continueOnError, null);
+    public void alterDatabase(Database desiredDatabase, String triggerPrefix, boolean continueOnError) {
+        alterDatabase(desiredDatabase, triggerPrefix, continueOnError, null);
     }
 
     @Override
@@ -250,7 +250,7 @@ public abstract class AbstractDatabasePlatform implements IDatabasePlatform {
     }
 
     @Override
-    public void alterTables(boolean continueOnError, boolean createTableIncludeApplicationTriggers, String symTablePrefix,
+    public void alterTables(boolean continueOnError, boolean createTableIncludeApplicationTriggers, String triggerPrefix,
             IAlterDatabaseInterceptor[] interceptors, Table... desiredTables) {
         Database currentDatabase = new Database();
         currentDatabase.setName(getName());
@@ -264,7 +264,7 @@ public abstract class AbstractDatabasePlatform implements IDatabasePlatform {
             Table currentTable = ddlReader.readTable(table.getCatalog(), table.getSchema(), table.getName());
             if (currentTable != null) {
                 if (createTableIncludeApplicationTriggers) {
-                    List<Trigger> triggers = ddlReader.getApplicationTriggersForModel(table.getCatalog(), table.getSchema(), table.getName(), symTablePrefix);
+                    List<Trigger> triggers = ddlReader.getApplicationTriggersForModel(table.getCatalog(), table.getSchema(), table.getName(), triggerPrefix);
                     if (triggers != null && triggers.size() > 0) {
                         currentTable.addTriggers(triggers);
                     }

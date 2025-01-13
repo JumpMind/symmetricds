@@ -692,7 +692,7 @@ public class DefaultDatabaseWriter extends AbstractDatabaseWriter {
             }
             if (writerSettings.isAlterTable()) {
                 getTargetPlatform().alterTables(!writerSettings.isCreateTableFailOnError(), writerSettings.isCreateTableIncludeApplicationTriggers(),
-                        writerSettings.getRuntimeConfigTablePrefix(), writerSettings.getAlterDatabaseInterceptors(), db.getTables());
+                        writerSettings.getRuntimeConfigTriggerPrefix(), writerSettings.getAlterDatabaseInterceptors(), db.getTables());
             } else {
                 getTargetPlatform().createDatabase(db, writerSettings.isCreateTableDropFirst(), !writerSettings.isCreateTableFailOnError());
             }
