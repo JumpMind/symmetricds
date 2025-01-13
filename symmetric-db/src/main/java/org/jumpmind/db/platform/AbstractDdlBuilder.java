@@ -897,10 +897,10 @@ public abstract class AbstractDdlBuilder implements IDdlBuilder {
             StringBuilder ddl) {
         ddl.append("DROP FUNCTION ");
         if (change.getFunction().getCatalogName() != null && change.getFunction().getCatalogName().length() > 0) {
-            ddl.append(change.getFunction().getCatalogName()).append(".");
+            ddl.append(change.getFunction().getCatalogName()).append(databaseInfo.getCatalogSeparator());
         }
         if (change.getFunction().getSchemaName() != null && change.getFunction().getSchemaName().length() > 0) {
-            ddl.append(change.getFunction().getSchemaName()).append(".");
+            ddl.append(change.getFunction().getSchemaName()).append(databaseInfo.getSchemaSeparator());
         }
         ddl.append(change.getFunction().getFunctionName());
         printEndOfStatement(ddl);
