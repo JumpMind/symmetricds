@@ -420,12 +420,6 @@ public class PostgreSqlDdlReader extends AbstractJdbcDdlReader {
     
     @Override
     public PlatformTrigger getPlatformTrigger(IDatabasePlatform platform, Trigger trigger) {
-        // create or replace function $(schemaName)f$(triggerName)() returns trigger as $function$
-//        select pg_get_functiondef('fphil'::regproc);
-//        
-//        SELECT pg_get_triggerdef(oid)
-//        FROM pg_trigger
-//       WHERE tgname = 'phil';
         int majorVersion = getPlatform().getDatabaseVersion().getVersion();
         int minorVersion = getPlatform().getDatabaseVersion().getMinorVersion();
         PlatformTrigger platformTrigger = null;
