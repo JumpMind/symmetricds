@@ -356,8 +356,8 @@ public class ModelComparator {
                     PlatformTrigger targetPlatformTrigger = targetTrigger.findPlatformTrigger(platformName);
                     PlatformTrigger sourcePlatformTrigger = sourceTrigger.findPlatformTrigger(platformName);
                     boolean triggerTextChanged = ! StringUtils.equals(targetPlatformTrigger.getTriggerText(), sourcePlatformTrigger.getTriggerText());
-                    String targetFunctionText = getFunctionText(targetPlatformTrigger, platformName);;
-                    String sourceFunctionText = getFunctionText(sourcePlatformTrigger, platformName);;
+                    String targetFunctionText = getFunctionText(targetPlatformTrigger, platformName);
+                    String sourceFunctionText = getFunctionText(sourcePlatformTrigger, platformName);
                     boolean functionTextChanged = ! StringUtils.equals(targetFunctionText, sourceFunctionText);
                     if (triggerTextChanged || functionTextChanged) {
                         changes.add(new RemoveTriggerChange(sourceTable, sourceTrigger));
