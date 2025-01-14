@@ -574,7 +574,7 @@ public class ModelComparator {
                         return sourceDefaultValueString.equalsIgnoreCase(targetDefaultValueString);
                     } else if (sourceColumn.isOfNumericType() && targetColumn.isOfNumericType()) {
                         if (sourceColumn.anyPlatformColumnNameContains("postgres")) {
-                            sourceDefaultValueString = sourceDefaultValueString.replace("'","").replace("::integer", "");
+                            sourceDefaultValueString = sourceDefaultValueString.replace("'", "").replace("::integer", "");
                         }
                         return sourceDefaultValueString.equalsIgnoreCase(targetDefaultValueString);
                     }

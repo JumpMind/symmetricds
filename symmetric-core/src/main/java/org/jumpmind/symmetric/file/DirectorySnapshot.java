@@ -22,10 +22,10 @@ package org.jumpmind.symmetric.file;
 
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet; 
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
-import java.util.Set; 
+import java.util.Set;
 import org.jumpmind.symmetric.model.FileSnapshot;
 import org.jumpmind.symmetric.model.FileSnapshot.LastEventType;
 import org.jumpmind.symmetric.model.FileTriggerRouter;
@@ -67,6 +67,7 @@ public class DirectorySnapshot extends ArrayList<FileSnapshot> {
 
     /**
      * Reconciles file change events in this directory snapshot with another snapshot (more recent) and produces a list of differences (a delta-change).
+     * 
      * @param anotherSnapshot
      * @return List of differences
      */

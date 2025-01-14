@@ -257,6 +257,7 @@ class PostgreSqlDdlReaderTest {
         testIndex.addColumn(testIndexColumn);
         return testIndex;
     }
+
     /**
      * Creates a stand-alone Trigger object per with specified properties
      */

@@ -26,5 +26,4 @@ public class MsSql2005TriggerTemplate extends MsSqlTriggerTemplate {
     public MsSql2005TriggerTemplate(ISymmetricDialect symmetricDialect) {
         super(symmetricDialect);
     }
-
 }

@@ -228,9 +228,10 @@ public class DatabaseXmlUtil {
                                     table.setName(attributeValue);
                                 } else if (attributeName.equalsIgnoreCase("description")) {
                                     table.setDescription(attributeValue);
-                                } if (attributeName.equalsIgnoreCase("logging")) {
+                                }
+                                if (attributeName.equalsIgnoreCase("logging")) {
                                     boolean logging = !("false".equalsIgnoreCase(attributeValue));
-                                     table.setLogging(logging); 
+                                    table.setLogging(logging);
                                 } else if (attributeName.equalsIgnoreCase("compression")) {
                                     if (CompressionTypes.PAGE.name().equalsIgnoreCase(attributeValue)) {
                                         table.setCompressionType(CompressionTypes.PAGE);

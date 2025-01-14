@@ -118,7 +118,6 @@ import org.jumpmind.util.FormatUtils;
 public class DataService extends AbstractService implements IDataService {
     private ISymmetricEngine engine;
     private IExtensionService extensionService;
-
     public static final int RECAPTURE_DATA_COMMIT_LIMIT = 1000;
     public static final int PROGRESS_LOG_UPDATE_DELAY_MS = 30000;
     public static final transient String TIMESTAMP_ISO_JSON_FORMAT = "yyyy-MM-dd'T'HH:mm:ss.SSS'Z'"; // Zulu == UTC is used in transaction ID for stale data
@@ -135,7 +134,6 @@ public class DataService extends AbstractService implements IDataService {
     }
 
     protected Map<IHeartbeatListener, Long> lastHeartbeatTimestamps = new HashMap<IHeartbeatListener, Long>();
-
 
     /**
      * Helper. Creates an ISO-compliant transaction Id string for specified instant and prefix.
@@ -3664,7 +3662,7 @@ public class DataService extends AbstractService implements IDataService {
      * @return recaptured data row
      */
     protected Data fetchRecapturedData(Data data, String recaptureTransactionId) {
-        if (data == null  ) {
+        if (data == null) {
             return null;
         }
         if (data.isPreRouted() || !(data.getDataEventType().isDml())) {
@@ -3693,7 +3691,6 @@ public class DataService extends AbstractService implements IDataService {
                 log.warn("Unable to recapture stale data_id={} because table={} was not found!)", data.getDataId(), fullTableName);
                 return null;
             }
-
             Trigger trigger = triggerRouters.iterator().next().getTrigger();
             table = table.copyAndFilterColumns(hist.getParsedColumnNames(), hist.getParsedPkColumnNames(), true, false);
             keys = recaptureKeysForData(table, data);
@@ -3785,7 +3782,6 @@ public class DataService extends AbstractService implements IDataService {
         if (insertList == null || insertList.size() < 0) {
             return 0;
         }
-
         ISqlTransaction transaction = null;
         try {
             transaction = sqlTemplate.startSqlTransaction();
@@ -3807,7 +3803,6 @@ public class DataService extends AbstractService implements IDataService {
         }
         return insertList.size();
     }
-
 
     /**
      * Looks up values of primary keys for specified data row object
