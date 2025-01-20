@@ -85,6 +85,12 @@ public class Channel implements Serializable, Cloneable {
         this.queue = "default";
     }
 
+    public Channel(String id, int processingOrder, int maxBatchSize, int maxBatchToSend, boolean enabled,
+            long extractPeriodMillis, boolean containsBigLobs, String queue) {
+        this(id, processingOrder, maxBatchSize, maxBatchToSend, enabled, extractPeriodMillis, containsBigLobs);
+        this.queue = queue;
+    }
+
     public String getChannelId() {
         return channelId;
     }

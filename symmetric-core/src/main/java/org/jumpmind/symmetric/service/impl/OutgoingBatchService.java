@@ -115,7 +115,8 @@ public class OutgoingBatchService extends AbstractService implements IOutgoingBa
             });
             for (OutgoingBatch outgoingBatch : list) {
                 if (includeConfigChannel || (!outgoingBatch.getChannelId().equals(Constants.CHANNEL_CONFIG) &&
-                        !outgoingBatch.getChannelId().equals(Constants.CHANNEL_MONITOR))) {
+                        !outgoingBatch.getChannelId().equals(Constants.CHANNEL_MONITOR) &&
+                        !outgoingBatch.getChannelId().equals(Constants.CHANNEL_SYSTEM))) {
                     outgoingBatch.setStatus(Status.OK);
                     outgoingBatch.setErrorFlag(false);
                     updateOutgoingBatch(outgoingBatch);
@@ -133,7 +134,7 @@ public class OutgoingBatchService extends AbstractService implements IOutgoingBa
             OutgoingBatches batches = getOutgoingBatches(nodeId, false);
             List<OutgoingBatch> list = batches.getBatches();
             for (OutgoingBatch outgoingBatch : list) {
-                if (outgoingBatch.getChannelId().equals(Constants.CHANNEL_CONFIG)) {
+                if (outgoingBatch.getChannelId().equals(Constants.CHANNEL_CONFIG) || outgoingBatch.getChannelId().equals(Constants.CHANNEL_SYSTEM)) {
                     outgoingBatch.setStatus(Status.OK);
                     outgoingBatch.setErrorFlag(false);
                     outgoingBatch.setIgnoreCount(1);
@@ -639,7 +640,8 @@ public class OutgoingBatchService extends AbstractService implements IOutgoingBa
                     batchesForChannel = filter.filter(channel, batchesForChannel);
                 }
             }
-            if (parameterService.is(ParameterConstants.DATA_EXTRACTOR_ENABLED) || channel.getChannelId().equals(Constants.CHANNEL_CONFIG)) {
+            if (parameterService.is(ParameterConstants.DATA_EXTRACTOR_ENABLED) || channel.getChannelId().equals(Constants.CHANNEL_CONFIG)
+                    || channel.getChannelId().equals(Constants.CHANNEL_SYSTEM)) {
                 keepers.addAll(batchesForChannel);
             }
         }
@@ -745,7 +747,7 @@ public class OutgoingBatchService extends AbstractService implements IOutgoingBa
     }
 
     public boolean isInitialLoadComplete(String nodeId) {
-        return areAllLoadBatchesComplete(nodeId) && !isUnsentDataOnChannelForNode(Constants.CHANNEL_CONFIG, nodeId);
+        return areAllLoadBatchesComplete(nodeId) && !isUnsentDataOnChannelForNode(Constants.CHANNEL_SYSTEM, nodeId);
     }
 
     public boolean areAllLoadBatchesComplete(String nodeId) {

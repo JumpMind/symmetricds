@@ -428,7 +428,7 @@ public class RouterService extends AbstractService implements IRouterService, IN
         Boolean producesCommonBatches = commonBatchesLastKnownState.get(channelId);
         long cacheTime = parameterService.getLong(ParameterConstants.CACHE_CHANNEL_COMMON_BATCHES_IN_MS);
         if (producesCommonBatches == null || System.currentTimeMillis() - commonBatchesCacheTime > cacheTime) {
-            producesCommonBatches = !Constants.CHANNEL_CONFIG.equals(channelId)
+            producesCommonBatches = !Constants.CHANNEL_CONFIG.equals(channelId) && !Constants.CHANNEL_SYSTEM.equals(channelId)
                     && !channel.isFileSyncFlag()
                     && !channel.isReloadFlag()
                     && !Constants.CHANNEL_HEARTBEAT.equals(channelId)
@@ -511,7 +511,7 @@ public class RouterService extends AbstractService implements IRouterService, IN
         Boolean onlyDefaultRoutersAssigned = defaultRouterOnlyLastKnownState.get(channelId);
         long cacheTime = parameterService.getLong(ParameterConstants.CACHE_CHANNEL_DEFAULT_ROUTER_IN_MS);
         if (onlyDefaultRoutersAssigned == null || System.currentTimeMillis() - defaultRoutersCacheTime > cacheTime) {
-            onlyDefaultRoutersAssigned = !Constants.CHANNEL_CONFIG.equals(channelId)
+            onlyDefaultRoutersAssigned = !Constants.CHANNEL_CONFIG.equals(channelId) && !Constants.CHANNEL_SYSTEM.equals(channelId)
                     && !channel.isFileSyncFlag()
                     && !channel.isReloadFlag()
                     && !Constants.CHANNEL_HEARTBEAT.equals(channelId)

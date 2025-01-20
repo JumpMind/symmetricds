@@ -239,7 +239,8 @@ public class DataExtractorService extends AbstractService implements IDataExtrac
                 Trigger trigger = triggerRouter.getTrigger();
                 String channelId = trigger.getChannelId();
                 String tableName = trigger.getSourceTableName();
-                if ((Constants.CHANNEL_CONFIG.equals(channelId) || Constants.CHANNEL_HEARTBEAT.equals(channelId)) && helper.shouldSendTable(tableName)) {
+                if ((Constants.CHANNEL_CONFIG.equals(channelId) || Constants.CHANNEL_SYSTEM.equals(channelId) || Constants.CHANNEL_HEARTBEAT.equals(channelId))
+                        && helper.shouldSendTable(tableName)) {
                     TriggerHistory triggerHistory = triggerRouterService.getNewestTriggerHistoryForTrigger(trigger.getTriggerId(), null, null, tableName);
                     if (triggerHistory == null) {
                         Table table = platform.getTableFromCache(trigger.getSourceCatalogName(), trigger.getSourceSchemaName(), tableName, false);

@@ -78,7 +78,7 @@ public class HttpTransportManager extends AbstractTransportManager implements IT
         StringBuilder data = new StringBuilder();
         Map<String, BatchId> batchIds = engine.getIncomingBatchService().findMaxBatchIdsByChannel();
         for (String channelId : batchIds.keySet()) {
-            if (!Constants.CHANNEL_CONFIG.equals(channelId) && !Constants.CHANNEL_HEARTBEAT.equals(channelId)) {
+            if (!Constants.CHANNEL_CONFIG.equals(channelId) && !Constants.CHANNEL_HEARTBEAT.equals(channelId) && !Constants.CHANNEL_SYSTEM.equals(channelId)) {
                 BatchId batchId = batchIds.get(channelId);
                 append(data, channelId + "-" + batchId.getNodeId(), batchId.getBatchId());
             }
