@@ -191,7 +191,7 @@ public class DataService extends AbstractService implements IDataService {
         if (request.getCreateTime() == null) {
             request.setCreateTime(time);
         }
-        request.setCreateTime(new Date((request.getCreateTime().getTime() / 1000) * 1000));
+        request.setCreateTime(new Date((request.getCreateTime().getTime() / 10) * 10));
         transaction.prepareAndExecute(
                 getSql("insertTableReloadRequest"),
                 new Object[] { request.getReloadSelect(), request.getBeforeCustomSql(),
@@ -867,7 +867,6 @@ public class DataService extends AbstractService implements IDataService {
                         // Insert new table reload request
                         tableReloadRequest.setLoadId(0l);
                         tableReloadRequest.setProcessed(false);
-                        tableReloadRequest.setCreateTime(new Date());
                         insertTableReloadRequest(tableReloadRequest);
                         // Start a new load
                         loadId = 0l;
