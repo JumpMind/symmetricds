@@ -57,7 +57,6 @@ import java.nio.charset.StandardCharsets;
 import java.util.Collection;
 import java.util.Map;
 
-import org.apache.commons.lang3.StringUtils;
 import org.apache.commons.text.StringEscapeUtils;
 import org.jumpmind.db.model.Column;
 import org.jumpmind.db.model.CompressionTypes;
@@ -376,6 +375,19 @@ public class DatabaseXmlUtil {
                             indexColumn.setColumn(table.getColumnWithName(indexColumn.getName()));
                             if (index != null) {
                                 index.addColumn(indexColumn);
+                            }
+                        } else if (name.equalsIgnoreCase("include-column")) {
+                            IndexColumn indexColumn = new IndexColumn();
+                            for (int i = 0; i < parser.getAttributeCount(); i++) {
+                                String attributeName = parser.getAttributeName(i);
+                                String attributeValue = parser.getAttributeValue(i);
+                                if (attributeName.equalsIgnoreCase("name")) {
+                                    indexColumn.setName(attributeValue);
+                                }
+                            }
+                            indexColumn.setColumn(table.getColumnWithName(indexColumn.getName()));
+                            if (index != null) {
+                                index.addIncludedColumn(indexColumn);
                             }
                         } else if (name.equalsIgnoreCase("platform-index")) {
                             PlatformIndex platformIndex = new PlatformIndex();
@@ -723,6 +735,7 @@ public class DatabaseXmlUtil {
                     for (IndexColumn column : index.getColumns()) {
                         output.write("\t\t\t<unique-column name=\"" + StringEscapeUtils.escapeXml10(column.getName()) + "\"/>\n");
                     }
+                    handleIncludeColumns(output, index);
                 } else {
                     output.write("\t\t<index name=\"" + StringEscapeUtils.escapeXml10(index.getName()) + "\">\n");
                     for (IndexColumn column : index.getColumns()) {
@@ -732,6 +745,7 @@ public class DatabaseXmlUtil {
                         }
                         output.write("/>\n");
                     }
+                    handleIncludeColumns(output, index);
                 }
                 if (index.getPlatformIndexes() != null && index.getPlatformIndexes().size() > 0) {
                     Map<String, PlatformIndex> platformIndexes = index.getPlatformIndexes();
@@ -815,5 +829,11 @@ public class DatabaseXmlUtil {
                     StringEscapeUtils.escapeXml10(fk.getOnDeleteAction().getForeignKeyActionName()) + "\"");
         }
         return sb.toString();
+    }
+    
+    private static void handleIncludeColumns(Writer output, IIndex index) throws IOException {
+        for (IndexColumn column : index.getIncludedColumns()) {
+            output.write("\t\t\t<include-column name=\"" + StringEscapeUtils.escapeXml10(column.getName()) + "\"/>\n");
+        }
     }
 }
