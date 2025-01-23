@@ -74,25 +74,21 @@ public class ConfigurationService extends AbstractService implements IConfigurat
 
     protected final void createDefaultChannels() {
         Map<String, Channel> updatedDefaultChannels = new LinkedHashMap<String, Channel>();
-        updatedDefaultChannels.put(Constants.CHANNEL_CONFIG,
-                new Channel(Constants.CHANNEL_CONFIG, 0, 2000, 10, true, 0, true));
+        updatedDefaultChannels.put(Constants.CHANNEL_CONFIG, new Channel(Constants.CHANNEL_CONFIG, 0, 2000, 10, true, 0, true, Constants.QUEUE_SYSTEM));
+        updatedDefaultChannels.put(Constants.CHANNEL_SYSTEM, new Channel(Constants.CHANNEL_SYSTEM, 0, 2000, 10, true, 0, true, Constants.QUEUE_SYSTEM));
         Channel reloadChannel;
         if (parameterService.is(ParameterConstants.INITIAL_LOAD_USE_EXTRACT_JOB)) {
-            reloadChannel = new Channel(Constants.CHANNEL_RELOAD, 1, 100000, 10, true, 0, false, true, false);
+            reloadChannel = new Channel(Constants.CHANNEL_RELOAD, 1, 500000, 10, true, 0, false, true, false);
             reloadChannel.setQueue(Constants.QUEUE_RELOAD);
         } else {
             reloadChannel = new Channel(Constants.CHANNEL_RELOAD, 1, 1, 1, true, 0, false, true, false);
         }
         reloadChannel.setDataLoaderType("bulk");
         updatedDefaultChannels.put(Constants.CHANNEL_RELOAD, reloadChannel);
-        updatedDefaultChannels.put(Constants.CHANNEL_MONITOR,
-                new Channel(Constants.CHANNEL_MONITOR, 2, 100, 10, true, 0, true));
-        updatedDefaultChannels.put(Constants.CHANNEL_HEARTBEAT,
-                new Channel(Constants.CHANNEL_HEARTBEAT, 2, 100, 10, true, 0, false));
-        updatedDefaultChannels.put(Constants.CHANNEL_DEFAULT,
-                new Channel(Constants.CHANNEL_DEFAULT, 500000, 1000, 10, true, 0, false));
-        updatedDefaultChannels.put(Constants.CHANNEL_DYNAMIC,
-                new Channel(Constants.CHANNEL_DYNAMIC, 99999, 1000, 10, true, 0, false));
+        updatedDefaultChannels.put(Constants.CHANNEL_MONITOR, new Channel(Constants.CHANNEL_MONITOR, 2, 100, 10, true, 0, true, Constants.QUEUE_SYSTEM));
+        updatedDefaultChannels.put(Constants.CHANNEL_HEARTBEAT, new Channel(Constants.CHANNEL_HEARTBEAT, 2, 100, 10, true, 0, false, Constants.QUEUE_SYSTEM));
+        updatedDefaultChannels.put(Constants.CHANNEL_DEFAULT, new Channel(Constants.CHANNEL_DEFAULT, 500000, 1000, 10, true, 0, false));
+        updatedDefaultChannels.put(Constants.CHANNEL_DYNAMIC, new Channel(Constants.CHANNEL_DYNAMIC, 99999, 1000, 10, true, 0, false));
         if (parameterService.is(ParameterConstants.FILE_SYNC_ENABLE)) {
             updatedDefaultChannels.put(Constants.CHANNEL_FILESYNC,
                     new Channel(Constants.CHANNEL_FILESYNC, 3, 100, 10, true, 0, false, "nontransactional", false, true));

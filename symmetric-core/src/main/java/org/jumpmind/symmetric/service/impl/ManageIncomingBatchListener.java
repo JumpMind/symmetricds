@@ -56,10 +56,10 @@ import org.jumpmind.symmetric.model.IncomingError;
 import org.jumpmind.symmetric.model.ProcessInfo;
 import org.jumpmind.symmetric.service.IDataLoaderService;
 import org.jumpmind.symmetric.service.IDataService;
+import org.jumpmind.symmetric.service.IIncomingBatchListener;
 import org.jumpmind.symmetric.service.IIncomingBatchService;
 import org.jumpmind.symmetric.service.IOutgoingBatchService;
 import org.jumpmind.symmetric.service.IParameterService;
-import org.jumpmind.symmetric.service.IIncomingBatchListener;
 import org.jumpmind.symmetric.statistic.IStatisticManager;
 import org.jumpmind.symmetric.transport.TransportException;
 import org.jumpmind.util.ExceptionUtils;
@@ -106,9 +106,8 @@ class ManageIncomingBatchListener implements IDataProcessorListener {
         Batch batch = context.getBatch();
         this.currentBatch = null;
         context.remove("currentBatch");
-        if (parameterService.is(ParameterConstants.DATA_LOADER_ENABLED)
-                || (batch.getChannelId() != null && batch.getChannelId().equals(
-                        Constants.CHANNEL_CONFIG))) {
+        if (parameterService.is(ParameterConstants.DATA_LOADER_ENABLED) || (batch.getChannelId() != null && (batch.getChannelId().equals(
+                Constants.CHANNEL_CONFIG) || batch.getChannelId().equals(Constants.CHANNEL_SYSTEM)))) {
             if (batch.getBatchId() == Constants.VIRTUAL_BATCH_FOR_REGISTRATION && batch.getSourceNodeId() != null) {
                 log.info("Preparing to receive registration from node {} by clearing its outgoing config batches", batch.getSourceNodeId());
                 IOutgoingBatchService outgoingBatchService = engine.getOutgoingBatchService();
