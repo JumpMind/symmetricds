@@ -589,8 +589,7 @@ public class TriggerRouterService extends AbstractService implements ITriggerRou
                 TableConstants.getTableName(tablePrefix, TableConstants.SYM_COMPARE_TABLE_STATUS).equals(tableName)) {
             trigger.setChannelId(Constants.CHANNEL_MONITOR);
             trigger.setUseCaptureOldData(true);
-        } else if (TableConstants.getTableName(tablePrefix, TableConstants.SYM_FILE_SNAPSHOT)
-                .equals(tableName)) {
+        } else if (TableConstants.getTableName(tablePrefix, TableConstants.SYM_FILE_SNAPSHOT).equals(tableName)) {
             trigger.setChannelId(Constants.CHANNEL_DYNAMIC);
             trigger.setChannelExpression("$(curTriggerValue).$(curColumnPrefix)" + platform.alterCaseToMatchDatabaseDefaultCase("channel_id"));
             trigger.setReloadChannelId(Constants.CHANNEL_FILESYNC_RELOAD);
@@ -600,6 +599,15 @@ public class TriggerRouterService extends AbstractService implements ITriggerRou
             trigger.setSyncOnInsert(syncEnabled);
             trigger.setSyncOnUpdate(syncEnabled); // Changed to false because of issues with the traffic file
             trigger.setSyncOnDelete(false);
+        } else if (TableConstants.getTableName(tablePrefix, TableConstants.SYM_NODE).equals(tableName) ||
+                TableConstants.getTableName(tablePrefix, TableConstants.SYM_NODE_SECURITY).equals(tableName) ||
+                TableConstants.getTableName(tablePrefix, TableConstants.SYM_INCOMING_ERROR).equals(tableName) ||
+                TableConstants.getTableName(tablePrefix, TableConstants.SYM_OUTGOING_ERROR).equals(tableName) ||
+                TableConstants.getTableName(tablePrefix, TableConstants.SYM_CONSOLE_USER).equals(tableName) ||
+                TableConstants.getTableName(tablePrefix, TableConstants.SYM_CONSOLE_USER_HIST).equals(tableName) ||
+                TableConstants.getTableName(tablePrefix, TableConstants.SYM_CONSOLE_ROLE).equals(tableName) ||
+                TableConstants.getTableName(tablePrefix, TableConstants.SYM_CONSOLE_ROLE_PRIVILEGE).equals(tableName)) {
+            trigger.setChannelId(Constants.CHANNEL_SYSTEM);
         } else {
             trigger.setChannelId(Constants.CHANNEL_CONFIG);
         }
@@ -609,16 +617,11 @@ public class TriggerRouterService extends AbstractService implements ITriggerRou
             trigger.setSyncOnUpdate(false);
             trigger.setSyncOnDelete(false);
         }
-        if (!TableConstants.getTableName(tablePrefix, TableConstants.SYM_NODE_HOST)
-                .equals(tableName) &&
-                !TableConstants.getTableName(tablePrefix, TableConstants.SYM_NODE)
-                        .equals(tableName) &&
-                !TableConstants.getTableName(tablePrefix, TableConstants.SYM_NODE_SECURITY)
-                        .equals(tableName) &&
-                !TableConstants.getTableName(tablePrefix, TableConstants.SYM_TABLE_RELOAD_REQUEST)
-                        .equals(tableName) &&
-                !TableConstants.getTableName(tablePrefix, TableConstants.SYM_FILE_SNAPSHOT)
-                        .equals(tableName)) {
+        if (!TableConstants.getTableName(tablePrefix, TableConstants.SYM_NODE_HOST).equals(tableName) &&
+                !TableConstants.getTableName(tablePrefix, TableConstants.SYM_NODE).equals(tableName) &&
+                !TableConstants.getTableName(tablePrefix, TableConstants.SYM_NODE_SECURITY).equals(tableName) &&
+                !TableConstants.getTableName(tablePrefix, TableConstants.SYM_TABLE_RELOAD_REQUEST).equals(tableName) &&
+                !TableConstants.getTableName(tablePrefix, TableConstants.SYM_FILE_SNAPSHOT).equals(tableName)) {
             trigger.setUseCaptureLobs(true);
         }
         // little trick to force the rebuild of SymmetricDS triggers every time
@@ -980,7 +983,7 @@ public class TriggerRouterService extends AbstractService implements ITriggerRou
             String sourceNodeGroupId, String targetNodeGroupId) {
         return enhanceTriggerRouters(sqlTemplate.query(
                 getTriggerRouterSql("activeTriggersForReloadSql"), new TriggerRouterMapper(),
-                sourceNodeGroupId, targetNodeGroupId, Constants.CHANNEL_CONFIG));
+                sourceNodeGroupId, targetNodeGroupId, Constants.CHANNEL_CONFIG, Constants.CHANNEL_SYSTEM));
     }
 
     public TriggerRouter findTriggerRouterById(String triggerId, String routerId) {

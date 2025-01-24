@@ -31,6 +31,7 @@ import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
+
 import org.jumpmind.symmetric.common.Constants;
 import org.jumpmind.symmetric.model.AbstractBatch.Status;
 
@@ -123,6 +124,7 @@ public class OutgoingBatches implements Serializable {
         for (Iterator<OutgoingBatch> iterator = batches.iterator(); iterator.hasNext();) {
             OutgoingBatch b = iterator.next();
             if (!b.isLoadFlag() && !b.getChannelId().contentEquals(Constants.CHANNEL_CONFIG) &&
+                    !b.getChannelId().contentEquals(Constants.CHANNEL_SYSTEM) &&
                     !b.getChannelId().contentEquals(Constants.CHANNEL_HEARTBEAT) && !b.getChannelId().contentEquals(Constants.CHANNEL_MONITOR)) {
                 iterator.remove();
             } else {

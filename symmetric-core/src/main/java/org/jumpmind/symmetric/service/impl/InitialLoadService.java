@@ -453,10 +453,10 @@ public class InitialLoadService extends AbstractService implements IInitialLoadS
                 log.info("Delaying initial load request for node {} until the last routing run is after {}",
                         nodeSecurity.getNodeId(), nodeSecurity.getRegistrationTime());
             } else {
-                int count = engine.getOutgoingBatchService().countOutgoingBatchesUnsent(Constants.CHANNEL_CONFIG);
+                int count = engine.getOutgoingBatchService().countOutgoingBatchesUnsent(Constants.CHANNEL_SYSTEM);
                 if (count > 0) {
                     okayToQueueLoad = false;
-                    log.info("Delaying initial load request for node {} until {} config batches are complete",
+                    log.info("Delaying initial load request for node {} until {} system batches are complete",
                             nodeSecurity.getNodeId(), count);
                 }
             }

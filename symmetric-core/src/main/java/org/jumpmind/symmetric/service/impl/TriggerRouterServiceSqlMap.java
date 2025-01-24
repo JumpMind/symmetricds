@@ -82,7 +82,7 @@ public class TriggerRouterServiceSqlMap extends AbstractSqlMap {
 
         putSql("activeTriggersForReloadSql", ""
                 + "where r.source_node_group_id = ? and                          "
-                + "  r.target_node_group_id = ? and t.channel_id != ? and tr.enabled=1 order by   "
+                + "  r.target_node_group_id = ? and t.channel_id not in (?, ?) and tr.enabled=1 order by   "
                 + "  tr.initial_load_order                                       ");
 
         putSql("activeTriggerHistSql", "where inactive_time is null");

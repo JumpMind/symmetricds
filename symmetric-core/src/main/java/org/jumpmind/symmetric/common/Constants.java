@@ -79,12 +79,14 @@ final public class Constants {
     public static final String CHANNEL_HEARTBEAT = "heartbeat";
     public static final String CHANNEL_MONITOR = "monitor";
     public static final String CHANNEL_CONFIG = "config";
+    public static final String CHANNEL_SYSTEM = "system";
     public static final String CHANNEL_RELOAD = "reload";
     public static final String CHANNEL_DEFAULT = "default";
     public static final String CHANNEL_FILESYNC = "filesync";
     public static final String CHANNEL_FILESYNC_RELOAD = "filesync_reload";
     public static final String CHANNEL_DYNAMIC = "dynamic";
     public static final String QUEUE_DEFAULT = "default";
+    public static final String QUEUE_SYSTEM = "system";
     public static final String QUEUE_RELOAD = "reload";
     public static final String DELIMITER_QUEUE_THREAD = "!";
     public static final String PUSH_JOB_TIMER = "job.push";
