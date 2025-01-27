@@ -3789,7 +3789,6 @@ public class DataService extends AbstractService implements IDataService {
                 insertData(transaction, data);
             }
             transaction.commit();
-            transaction = null;
         } catch (Exception ex) {
             if (transaction != null) {
                 transaction.rollback();
