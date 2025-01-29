@@ -470,6 +470,7 @@ final public class ParameterConstants {
     public final static String CAPTURE_TYPE_TIME_BASED = "time.based.capture";
     public final static String FILESYNCTRACKER_MAX_ROWS_BEFORE_COMMIT = "filesynctracker.max.rows.before.commit";
     public final static String KEEP_BULK_STAGING_FILES = "keep.bulk.staging.files";
+    public final static String MSSQL_BULK_LOAD_BCP_CODE_PAGE = "mssql.bulk.load.bcp.code.page";
 
     public static Map<String, ParameterMetaData> getParameterMetaData() {
         return parameterMetaData;

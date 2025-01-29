@@ -68,6 +68,7 @@ public class DatabaseWriterSettings {
     protected String runtimeConfigTriggerPrefix = "sym";
     protected boolean createTableIncludeApplicationTriggers = false;
     protected boolean keepBulkStagingFiles = false;
+    protected String msSqlBulkLoadBcpCodePage;
 
     public void setAlterDatabaseInterceptors(IAlterDatabaseInterceptor[] alterDatabaseInterceptors) {
         this.alterDatabaseInterceptors = alterDatabaseInterceptors;
@@ -410,5 +411,13 @@ public class DatabaseWriterSettings {
 
     public void setKeepBulkStagingFiles(boolean keepBulkStagingFiles) {
         this.keepBulkStagingFiles = keepBulkStagingFiles;
+    }
+
+    public String getMsSqlBulkLoadBcpCodePage() {
+        return msSqlBulkLoadBcpCodePage;
+    }
+
+    public void setMsSqlBulkLoadBcpCodePage(String msSqlBulkLoadBcpCodePage) {
+        this.msSqlBulkLoadBcpCodePage = msSqlBulkLoadBcpCodePage;
     }
 }
