@@ -112,6 +112,7 @@ public abstract class AbstractDataLoaderFactory {
         }
         settings.setConflictSettingsByChannel(byChannel);
         settings.setConflictSettingsByTable(byTable);
+        settings.setKeepBulkStagingFiles(parameterService.is(ParameterConstants.KEEP_BULK_STAGING_FILES));
         return settings;
     }
 

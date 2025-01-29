@@ -67,6 +67,7 @@ public class DatabaseWriterSettings {
     protected boolean stripOutCommentsInScripts = true;
     protected String runtimeConfigTriggerPrefix = "sym";
     protected boolean createTableIncludeApplicationTriggers = false;
+    protected boolean keepBulkStagingFiles = false;
 
     public void setAlterDatabaseInterceptors(IAlterDatabaseInterceptor[] alterDatabaseInterceptors) {
         this.alterDatabaseInterceptors = alterDatabaseInterceptors;
@@ -401,5 +402,13 @@ public class DatabaseWriterSettings {
 
     public void setCreateTableIncludeApplicationTriggers(boolean createTableIncludeApplicationTriggers) {
         this.createTableIncludeApplicationTriggers = createTableIncludeApplicationTriggers;
+    }
+
+    public boolean isKeepBulkStagingFiles() {
+        return keepBulkStagingFiles;
+    }
+
+    public void setKeepBulkStagingFiles(boolean keepBulkStagingFiles) {
+        this.keepBulkStagingFiles = keepBulkStagingFiles;
     }
 }
